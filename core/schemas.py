@@ -109,6 +109,9 @@ class DOMBlock(BaseModel):
     raw_text: str
     normalized_text: str
     is_hidden: bool = False
+    selector_path: Optional[str] = None # e.g. "div.hero > h1" or "footer > div.fine"
+    prominence_weight: float = 1.0 # 1.0 for Hero, 0.75 for Main, 0.25 for Footer, 0.0 for Hidden
+    has_conditions: bool = False # Flag if block contains caveats, asterisks, or disclaimers
 
 class EvidencePassage(BaseModel):
     quote: str
@@ -118,6 +121,8 @@ class EvidencePassage(BaseModel):
     tag_name: str
     is_verified: bool = False
     verification_method: str = "unverified" # "exact", "normalized_whitespace", "unverified"
+    selector_path: Optional[str] = None
+    prominence_weight: float = 1.0
 
 class ComparisonRecord(BaseModel):
     claim_id: str

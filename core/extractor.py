@@ -15,22 +15,41 @@ def normalize_text(text: str) -> str:
 
 class ContentExtractor:
     """
-    Extracts text and semantic hierarchy from HTML snapshots.
-    Maintains raw text immutability and assigns heuristic DOM zones.
+    Phase 2: Examine the Supplied Landing-Page Evidence.
+    - Reads extracted page content and rich source metadata.
+    - Assigns DOM zones, selector paths, and prominence weights.
+    - Detects conditions, exclusions, and disclaimers within blocks.
+    - Evaluates retrieval completeness to prevent false absence conclusions.
     """
     
     HERO_TAGS = {'h1', 'header'}
     BODY_TAGS = {'p', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'button', 'a', 'span', 'div', 'td', 'th'}
     FOOTER_TAGS = {'footer', 'small'}
     
-    FOOTER_INDICATORS = {'footer', 'disclaimer', 'legal', 'terms', 'fineprint', 'copyright', 'privacy'}
+    FOOTER_INDICATORS = {'footer', 'disclaimer', 'legal', 'terms', 'fineprint', 'copyright', 'privacy', 'fine'}
     HERO_INDICATORS = {'hero', 'banner', 'headline', 'main-title', 'top'}
+
+    CONDITION_PATTERNS = [
+        r'\*',
+        r'†',
+        r'\bterms\s*(?:and|&)?\s*conditions\b',
+        r'\bsubject\s*to\b',
+        r'\bqualified\s*(?:borrowers|buyers|applicants|customers)\b',
+        r'\brestrictions\s*apply\b',
+        r'\bsee\s*details\b',
+        r'\bdisclaimer\b',
+        r'\bwhile\s*supplies\s*last\b',
+        r'\bfor\s*eligible\s*users\b'
+    ]
 
     def extract_blocks(self, html_content: str) -> Tuple[List[DOMBlock], List[str]]:
         warnings = []
         if not html_content or not html_content.strip():
-            warnings.append("Input HTML is empty.")
+            warnings.append("Input HTML snapshot is empty.")
             return [], warnings
+
+        # Phase 2 Rule 5: Check for incomplete or truncated retrieval
+        self._check_retrieval_completeness(html_content, warnings)
 
         soup = BeautifulSoup(html_content, 'html.parser')
 
@@ -58,17 +77,19 @@ class ContentExtractor:
                         order_index=block_counter,
                         raw_text=label.strip(),
                         normalized_text=norm,
-                        is_hidden=False
+                        is_hidden=False,
+                        selector_path="svg",
+                        prominence_weight=0.5,
+                        has_conditions=self._detect_conditions(label)
                     ))
                     block_counter += 1
 
         # Identify all meaningful content nodes
-        # Traverse top-level content tags
         candidates = soup.find_all(['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'li', 'button', 'a', 'footer', 'small', 'div'])
         
         seen_texts = set()
         for idx, tag in enumerate(candidates):
-            # Only process leaf-ish nodes or nodes without block children to avoid redundant outer wraps
+            # Only process leaf-ish nodes or nodes without block children
             has_nested_blocks = bool(tag.find(['p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'footer', 'small']))
             if has_nested_blocks and tag.name in {'div', 'footer'}:
                 continue
@@ -83,12 +104,23 @@ class ContentExtractor:
                 continue
             seen_texts.add(norm)
 
-            # Check hidden styles
+            # Check hidden styles and attributes
             style = tag.get('style', '') or ''
-            is_hidden = 'display:none' in style.lower() or 'visibility:hidden' in style.lower() or tag.get('aria-hidden') == 'true'
+            classes = tag.get('class', [])
+            is_hidden = (
+                'display:none' in style.lower() or
+                'visibility:hidden' in style.lower() or
+                'opacity:0' in style.lower() or
+                tag.get('aria-hidden') == 'true' or
+                'hidden' in classes or
+                'sr-only' in classes
+            )
 
-            # Determine heuristic DOM Zone
+            # Determine heuristic DOM Zone & Prominence
             zone = self._determine_zone(tag, block_counter)
+            prominence = self._calculate_prominence(tag, zone, is_hidden)
+            selector_path = self._build_selector_path(tag)
+            has_conds = self._detect_conditions(raw)
 
             blocks.append(DOMBlock(
                 block_id=f"B{block_counter:03d}",
@@ -97,7 +129,10 @@ class ContentExtractor:
                 order_index=block_counter,
                 raw_text=raw.strip(),
                 normalized_text=norm,
-                is_hidden=is_hidden
+                is_hidden=is_hidden,
+                selector_path=selector_path,
+                prominence_weight=prominence,
+                has_conditions=has_conds
             ))
             block_counter += 1
 
@@ -108,6 +143,53 @@ class ContentExtractor:
 
         return blocks, warnings
 
+    def _check_retrieval_completeness(self, html_content: str, warnings: List[str]):
+        """Detects if page snapshot was truncated or if single-page dynamic content is missing."""
+        content_lower = html_content.lower()
+        if '</html>' not in content_lower:
+            warnings.append("HTML document appears truncated or unclosed (missing </html>).")
+        if '</body>' not in content_lower:
+            warnings.append("HTML document body is unclosed.")
+        if ('id="root"' in content_lower or 'id="app"' in content_lower) and len(html_content) < 800:
+            warnings.append("Possible unhydrated single-page client application root detected.")
+
+    def _build_selector_path(self, tag) -> str:
+        """Constructs an interpretable CSS selector path for traceability."""
+        parts = []
+        curr = tag
+        depth = 0
+        while curr and curr.name not in {'[document]', 'html', 'body'} and depth < 3:
+            tag_str = curr.name
+            classes = curr.get('class', [])
+            if classes:
+                first_class = classes[0]
+                tag_str += f".{first_class}"
+            elif curr.get('id'):
+                tag_str += f"#{curr.get('id')}"
+            parts.insert(0, tag_str)
+            curr = curr.parent
+            depth += 1
+        return " > ".join(parts) if parts else tag.name
+
+    def _calculate_prominence(self, tag, zone: DOMZone, is_hidden: bool) -> float:
+        """Calculates evidence prominence weight (0.0 to 1.0) based on location and typography."""
+        if is_hidden:
+            return 0.0
+        if zone == DOMZone.HERO_CANDIDATE:
+            return 1.0
+        elif zone == DOMZone.FOOTER_DISCLAIMER:
+            return 0.2 if tag.name == 'small' else 0.3
+        elif tag.name in {'h1', 'h2'}:
+            return 0.9
+        elif tag.name in {'h3', 'h4', 'h5', 'h6'}:
+            return 0.8
+        return 0.75
+
+    def _detect_conditions(self, text: str) -> bool:
+        """Flags whether text contains caveats, exclusions, or disclaimer cues."""
+        text_lower = text.lower()
+        return any(re.search(pat, text_lower) for pat in self.CONDITION_PATTERNS)
+
     def _determine_zone(self, tag, order_idx: int) -> DOMZone:
         # Check parents for footer or hero cues
         classes_and_id = ' '.join(filter(None, [
@@ -115,7 +197,7 @@ class ContentExtractor:
             tag.get('id', '')
         ])).lower()
 
-        # Check if in footer
+        # Check if in footer or disclaimer container
         if tag.name in self.FOOTER_TAGS or any(ind in classes_and_id for ind in self.FOOTER_INDICATORS):
             return DOMZone.FOOTER_DISCLAIMER
         for parent in tag.parents:
