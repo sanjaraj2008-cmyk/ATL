@@ -290,13 +290,15 @@ class ClaimsDecomposer:
             ))
         else:
             price_match = re.search(
-                r'(?:starting\s*(?:at|from)|from|only|as\s*low\s*as)?\s*\$(\d+(?:\.\d+)?)\s*(?:\/|\s*per\s*|\s*a\s*)?\s*(month|mo|year|yr|user|seat|day|week)?',
+                r'(?:starting\s*(?:at|from)|from|only|as\s*low\s*as)?\s*([\$₹€£]|rs\.?|inr\s*)\s*(\d+(?:\.\d+)?)\s*(?:\/|\s*per\s*|\s*a\s*)?\s*(month|mo|year|yr|user|seat|day|week)?',
                 clause_lower
             )
             # Only treat as price point if it wasn't a discount statement (e.g. not "$50 off" and not "save $50")
             if price_match and not (save_m or discount_m):
-                amount = price_match.group(1)
-                time_unit = price_match.group(2) or "unit"
+                curr_symbol = (price_match.group(1) or "$").strip()
+                amount = price_match.group(2)
+                time_unit = price_match.group(3) or "unit"
+                curr_unit = "dollar" if curr_symbol == "$" else ("rupee" if curr_symbol in ("₹", "rs", "rs.", "inr") else "currency")
                 results.append(AtomicClaim(
                     claim_id="",
                     canonical_id="",
@@ -307,10 +309,10 @@ class ClaimsDecomposer:
                     predicate="base_price",
                     numeric=NumericSpec(
                         value=Decimal(amount),
-                        unit="dollar",
+                        unit=curr_unit,
                         time_basis=time_unit,
                         comparator=Comparator.FROM if "from" in clause_lower or "starting" in clause_lower else Comparator.EXACT,
-                        raw_str=f"${amount}/{time_unit}"
+                        raw_str=f"{curr_symbol}{amount}/{time_unit}"
                     ),
                     qualifiers=extracted_qualifiers,
                     materiality=Materiality.HIGH,

@@ -529,30 +529,43 @@ class ClaimMatcher:
                     elif expected_num and val != expected_num:
                         found_contradiction = (passage, val)
             else:
-                match = re.search(r'\$(\d+(?:\.\d+)?)', text_lower)
+                match = re.search(r'(?:[\$₹€£]|rs\.?|inr\s*)\s*(\d+(?:\.\d+)?)', text_lower)
+                if not match and expected_num is not None:
+                    # Fallback for bare number if context mentions price or month
+                    match = re.search(rf'\b({expected_num})\b', text_lower)
                 if match:
                     val = Decimal(match.group(1))
                     verified, passage = self.verifier.verify_quote(b.raw_text, blocks)
                     if not verified:
                         continue
                     if expected_num and val == expected_num:
-                        if b.has_conditions or b.dom_zone == DOMZone.FOOTER_DISCLAIMER:
-                            found_partial = (passage, val, "conditions or billing caveats apply")
+                        ad_text_lower = claim.text.lower()
+                        claims_permanent = any(w in ad_text_lower for w in ("forever", "no price increase", "lifetime", "permanent", "locked in"))
+                        page_is_temporary = any(w in text_lower for w in ("for the first", "first 3 months", "for 3 months", "then switch to standard", "then standard", "introductory"))
+                        if claims_permanent and page_is_temporary:
+                            found_contradiction = (passage, val, "Ad claims permanent rate ('Forever' / 'no price increase'), but landing page explicitly limits this pricing to an introductory duration (e.g., first 3 months) before switching to standard pricing.")
+                        elif b.has_conditions or b.dom_zone == DOMZone.FOOTER_DISCLAIMER or page_is_temporary:
+                            found_partial = (passage, val, "introductory duration or conditions apply")
                         else:
                             found_support = passage
                     elif expected_num and val != expected_num and val > expected_num:
-                        found_contradiction = (passage, val)
+                        found_contradiction = (passage, val, f"Ad promises rate of {expected_num}, but landing page explicitly states {val}.")
 
         if found_contradiction:
-            passage, val = found_contradiction
+            if len(found_contradiction) == 3:
+                passage, val, expl_override = found_contradiction
+            else:
+                passage, val = found_contradiction
+                expl_override = None
             unit_str = "% APR" if is_apr else "$"
+            exp_text = expl_override if expl_override else f"Ad promises {unit_str}{expected_num}, but landing page explicitly states {unit_str}{val}."
             return AuditFinding(
                 claim_id=claim.claim_id,
                 canonical_id=claim.canonical_id,
                 ad_claim_text=claim.text,
                 claim_materiality=claim.materiality,
                 status=ClaimStatus.CONTRADICTED,
-                reason_code=ReasonCode.NUMERIC_CONTRADICTION,
+                reason_code=ReasonCode.NUMERIC_CONTRADICTION if not expl_override else ReasonCode.TIMELINE_MISMATCH,
                 severity=Severity.HIGH,
                 confidence=Confidence.HIGH,
                 comparison=ComparisonRecord(
@@ -560,12 +573,13 @@ class ClaimMatcher:
                     subject_match=True,
                     predicate_match=True,
                     numeric_match=False,
+                    qualifiers_conflict=bool(expl_override),
                     evidence_passages=[passage]
                 ),
                 primary_evidence=passage,
-                explanation=f"Ad promises {unit_str}{expected_num}, but landing page explicitly states {unit_str}{val}.",
-                recommended_ad_fix=f"Update advertised price or rate to match landing page ({unit_str}{val}).",
-                recommended_page_fix=f"Honor the advertised price or rate of {unit_str}{expected_num} on the page."
+                explanation=exp_text,
+                recommended_ad_fix="Disclose promotional duration and subsequent regular pricing in ad copy." if expl_override else f"Update advertised price or rate to match landing page ({unit_str}{val}).",
+                recommended_page_fix="Align landing page with advertised terms." if expl_override else f"Honor the advertised price or rate of {unit_str}{expected_num} on the page."
             )
 
         if found_partial:
