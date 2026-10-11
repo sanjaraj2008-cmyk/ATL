@@ -168,6 +168,27 @@ class ComparisonRecord(BaseModel):
     qualifiers_conflict: bool = False
     evidence_passages: List[EvidencePassage] = Field(default_factory=list)
 
+class MismatchExplanation(BaseModel):
+    """
+    Phase 5: Structured Mismatch Explanation conforming to the 7-part evaluation criteria:
+    1. original_ad_claim: verbatim advertised promise
+    2. landing_page_finding: what inspected landing page establishes
+    3. discrepancy_description: precise discrepancy
+    4. practical_significance: impact on customer expectation and friction
+    5. conditions_and_visibility: qualifications, fine print, or prominence issues
+    6. recommended_ad_fix & recommended_page_fix: actionable, non-vague corrections
+    7. certainty_level: distinction between factual findings and uncertain interpretations
+    """
+    original_ad_claim: str
+    landing_page_finding: str
+    discrepancy_description: str
+    practical_significance: str
+    conditions_and_visibility: str
+    recommended_ad_fix: str
+    recommended_page_fix: str
+    is_factual: bool = True
+    certainty_level: str = "FACTUAL_EVIDENCE" # "FACTUAL_EVIDENCE" or "UNCERTAIN_INTERPRETATION"
+
 class AuditFinding(BaseModel):
     claim_id: str
     canonical_id: str
@@ -183,6 +204,7 @@ class AuditFinding(BaseModel):
     explanation: str
     recommended_ad_fix: str
     recommended_page_fix: str
+    mismatch_details: Optional[MismatchExplanation] = None
 
 class AuditState(str, Enum):
     COMPLETED = "COMPLETED"

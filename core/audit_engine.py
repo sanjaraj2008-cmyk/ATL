@@ -8,12 +8,13 @@ from core.extractor import ContentExtractor
 from core.claims import ClaimsDecomposer
 from core.matcher import ClaimMatcher
 from core.verifier import EvidenceVerifier
+from core.explainer import MismatchExplainer
 from core.scorer import Scorer
 
 class AuditEngine:
     """
     Main Orchestrator for the Ad-to-Landing-Page Message Match Auditor.
-    Connects Extractor, Decomposer, Matcher, Verifier, and Scorer into an atomic pipeline.
+    Connects Extractor, Decomposer, Matcher, Verifier, Explainer, and Scorer into an atomic pipeline.
     """
 
     VERSION = "1.0.0"
@@ -23,6 +24,7 @@ class AuditEngine:
         self.decomposer = ClaimsDecomposer()
         self.matcher = ClaimMatcher()
         self.verifier = EvidenceVerifier()
+        self.explainer = MismatchExplainer()
         self.scorer = Scorer()
 
     def audit(
@@ -84,7 +86,11 @@ class AuditEngine:
             records = self.verifier.audit_and_harden_finding(finding, blocks, snapshot_id=snap_id)
             all_citation_records.extend(records)
 
-        # 6. Calculate scores, coverage, prominence, and critical flags
+        # 6. Phase 5: Explain the Mismatch & Synthesize Concrete Recommendations
+        for finding, claim in zip(findings, atomic_claims):
+            self.explainer.explain_finding(finding, claim, blocks, retrieval_warnings=warnings)
+
+        # 7. Calculate scores, coverage, prominence, and critical flags
         match_score, coverage_idx, prominence_idx, has_crit_liability, grade = self.scorer.calculate_scores(findings)
 
         # 7. Compute quote verification rates from hardened records
