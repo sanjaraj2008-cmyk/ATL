@@ -105,6 +105,16 @@ class AtomicClaim(BaseModel):
     is_factual: bool = True # False for subjective marketing puffery or pure call to action
     source_span: Optional[str] = None # Verbatim substring or clause from ad source
 
+class VerificationStatus(str, Enum):
+    VERIFIED = "VERIFIED"
+    INVALID = "INVALID"
+    REQUIRES_REVIEW = "REQUIRES_REVIEW"
+
+class RelevanceStatus(str, Enum):
+    RELEVANT = "RELEVANT"
+    IRRELEVANT = "IRRELEVANT"
+    UNCERTAIN = "UNCERTAIN"
+
 class DOMBlock(BaseModel):
     block_id: str
     tag_name: str
@@ -116,6 +126,7 @@ class DOMBlock(BaseModel):
     selector_path: Optional[str] = None # e.g. "div.hero > h1" or "footer > div.fine"
     prominence_weight: float = 1.0 # 1.0 for Hero, 0.75 for Main, 0.25 for Footer, 0.0 for Hidden
     has_conditions: bool = False # Flag if block contains caveats, asterisks, or disclaimers
+    snapshot_id: Optional[str] = None # Source snapshot or content hash
 
 class EvidencePassage(BaseModel):
     quote: str
@@ -127,6 +138,26 @@ class EvidencePassage(BaseModel):
     verification_method: str = "unverified" # "exact", "normalized_whitespace", "unverified"
     selector_path: Optional[str] = None
     prominence_weight: float = 1.0
+    snapshot_id: Optional[str] = None
+    source_start_offset: Optional[int] = None
+    source_end_offset: Optional[int] = None
+    verification_status: VerificationStatus = VerificationStatus.VERIFIED
+    relevance_status: RelevanceStatus = RelevanceStatus.RELEVANT
+    rejection_reason: Optional[str] = None
+
+class CitationVerificationRecord(BaseModel):
+    citation_id: str
+    claim_id: str
+    block_id: str
+    snapshot_id: str
+    quoted_text: str
+    verification_status: VerificationStatus
+    match_method: str
+    source_start_offset: Optional[int] = None
+    source_end_offset: Optional[int] = None
+    dom_zone: DOMZone
+    relevance_status: RelevanceStatus
+    rejection_reason: Optional[str] = None
 
 class ComparisonRecord(BaseModel):
     claim_id: str
@@ -167,10 +198,12 @@ class AuditResult(BaseModel):
     total_claims: int = 0
     unique_canonical_claims: int = 0
     findings: List[AuditFinding] = Field(default_factory=list)
+    citation_records: List[CitationVerificationRecord] = Field(default_factory=list)
     critical_issues_count: int = 0
     has_critical_marketing_liability: bool = False
     reported_quotes_count: int = 0
     verified_quotes_count: int = 0
+    rejected_quotes_count: int = 0
     evidence_validity_rate: Optional[float] = None # None when reported_quotes_count == 0
     audit_warnings: List[str] = Field(default_factory=list)
     audit_metadata: Dict[str, Any] = Field(default_factory=dict)

@@ -1,6 +1,7 @@
 import re
 import html
-from typing import List, Tuple
+import hashlib
+from typing import List, Tuple, Optional
 from bs4 import BeautifulSoup, Comment
 from core.schemas import DOMBlock, DOMZone
 
@@ -42,11 +43,17 @@ class ContentExtractor:
         r'\bfor\s*eligible\s*users\b'
     ]
 
-    def extract_blocks(self, html_content: str) -> Tuple[List[DOMBlock], List[str]]:
+    def extract_blocks(
+        self,
+        html_content: str,
+        snapshot_id: Optional[str] = None
+    ) -> Tuple[List[DOMBlock], List[str]]:
         warnings = []
         if not html_content or not html_content.strip():
             warnings.append("Input HTML snapshot is empty.")
             return [], warnings
+
+        snap_id = snapshot_id or hashlib.sha256(html_content.encode('utf-8')).hexdigest()[:16]
 
         # Phase 2 Rule 5: Check for incomplete or truncated retrieval
         self._check_retrieval_completeness(html_content, warnings)
@@ -80,7 +87,8 @@ class ContentExtractor:
                         is_hidden=False,
                         selector_path="svg",
                         prominence_weight=0.5,
-                        has_conditions=self._detect_conditions(label)
+                        has_conditions=self._detect_conditions(label),
+                        snapshot_id=snap_id
                     ))
                     block_counter += 1
 
@@ -132,7 +140,8 @@ class ContentExtractor:
                 is_hidden=is_hidden,
                 selector_path=selector_path,
                 prominence_weight=prominence,
-                has_conditions=has_conds
+                has_conditions=has_conds,
+                snapshot_id=snap_id
             ))
             block_counter += 1
 
