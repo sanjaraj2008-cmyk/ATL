@@ -189,6 +189,19 @@ class MismatchExplanation(BaseModel):
     is_factual: bool = True
     certainty_level: str = "FACTUAL_EVIDENCE" # "FACTUAL_EVIDENCE" or "UNCERTAIN_INTERPRETATION"
 
+class SeverityAssessment(BaseModel):
+    """
+    Phase 6: Multi-Factor Severity Assessment & Prioritization.
+    Prioritizes findings based on promise materiality, discrepancy magnitude,
+    and customer impact, while flagging potential regulatory concerns with factual basis.
+    """
+    level: Severity # CRITICAL, HIGH, MEDIUM, LOW, INFO
+    priority_rank: int # 1 (Critical) to 5 (Info)
+    rationale: str
+    is_potentially_misleading: bool = False
+    regulatory_flag: bool = False
+    regulatory_review_note: Optional[str] = None
+
 class AuditFinding(BaseModel):
     claim_id: str
     canonical_id: str
@@ -205,6 +218,9 @@ class AuditFinding(BaseModel):
     recommended_ad_fix: str
     recommended_page_fix: str
     mismatch_details: Optional[MismatchExplanation] = None
+    severity_assessment: Optional[SeverityAssessment] = None
+    regulatory_flag: bool = False
+    regulatory_review_note: Optional[str] = None
 
 class AuditState(str, Enum):
     COMPLETED = "COMPLETED"
@@ -223,6 +239,7 @@ class AuditResult(BaseModel):
     citation_records: List[CitationVerificationRecord] = Field(default_factory=list)
     critical_issues_count: int = 0
     has_critical_marketing_liability: bool = False
+    regulatory_issues_count: int = 0
     reported_quotes_count: int = 0
     verified_quotes_count: int = 0
     rejected_quotes_count: int = 0

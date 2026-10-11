@@ -9,12 +9,13 @@ from core.claims import ClaimsDecomposer
 from core.matcher import ClaimMatcher
 from core.verifier import EvidenceVerifier
 from core.explainer import MismatchExplainer
+from core.severity import SeverityAssessor
 from core.scorer import Scorer
 
 class AuditEngine:
     """
     Main Orchestrator for the Ad-to-Landing-Page Message Match Auditor.
-    Connects Extractor, Decomposer, Matcher, Verifier, Explainer, and Scorer into an atomic pipeline.
+    Connects Extractor, Decomposer, Matcher, Verifier, Explainer, SeverityAssessor, and Scorer into an atomic pipeline.
     """
 
     VERSION = "1.0.0"
@@ -25,6 +26,7 @@ class AuditEngine:
         self.matcher = ClaimMatcher()
         self.verifier = EvidenceVerifier()
         self.explainer = MismatchExplainer()
+        self.severity_assessor = SeverityAssessor()
         self.scorer = Scorer()
 
     def audit(
@@ -90,10 +92,17 @@ class AuditEngine:
         for finding, claim in zip(findings, atomic_claims):
             self.explainer.explain_finding(finding, claim, blocks, retrieval_warnings=warnings)
 
-        # 7. Calculate scores, coverage, prominence, and critical flags
+        # 7. Phase 6: Assess Severity & Regulatory Compliance Risks
+        for finding, claim in zip(findings, atomic_claims):
+            self.severity_assessor.assess_finding(finding, claim)
+
+        # Sort findings by priority (Critical/High first)
+        findings = self.severity_assessor.sort_findings_by_priority(findings)
+
+        # 8. Calculate scores, coverage, prominence, and critical flags
         match_score, coverage_idx, prominence_idx, has_crit_liability, grade = self.scorer.calculate_scores(findings)
 
-        # 7. Compute quote verification rates from hardened records
+        # 9. Compute quote verification rates from hardened records
         reported_quotes = len(all_citation_records)
         verified_quotes = sum(1 for r in all_citation_records if r.verification_status == VerificationStatus.VERIFIED)
         rejected_quotes = sum(1 for r in all_citation_records if r.verification_status == VerificationStatus.INVALID)
@@ -107,6 +116,7 @@ class AuditEngine:
             1 for f in findings
             if f.severity == Severity.CRITICAL or (f.status == ClaimStatus.CONTRADICTED and f.severity == Severity.HIGH)
         )
+        regulatory_count = sum(1 for f in findings if f.regulatory_flag)
 
         audit_state = AuditState.PARTIAL_CONTENT_WARNING if warnings else AuditState.COMPLETED
 
@@ -122,6 +132,7 @@ class AuditEngine:
             citation_records=all_citation_records,
             critical_issues_count=critical_count,
             has_critical_marketing_liability=has_crit_liability,
+            regulatory_issues_count=regulatory_count,
             reported_quotes_count=reported_quotes,
             verified_quotes_count=verified_quotes,
             rejected_quotes_count=rejected_quotes,
@@ -134,6 +145,7 @@ class AuditEngine:
                 "snapshot_id": snap_id,
                 "citations_verified": verified_quotes,
                 "citations_rejected": rejected_quotes,
+                "regulatory_concerns_flagged": regulatory_count,
                 "mode": "deterministic_offline"
             }
         )
