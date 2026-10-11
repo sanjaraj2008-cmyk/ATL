@@ -41,17 +41,23 @@ class AuditEngine:
 
         # 1. Validation checks
         if not (ad_headline or ad_description or ad_call_to_action):
+            msg = "Ad headline, description, and call to action are all empty."
             return AuditResult(
                 audit_state=AuditState.FAILED_UNREADABLE_INPUT,
                 grade="Unable to Assess",
-                audit_warnings=["Ad headline, description, and call to action are all empty."]
+                scoring_unavailability_reason=msg,
+                audit_warnings=[msg],
+                retrieval_limitations=[msg]
             )
 
         if not landing_page_html or not landing_page_html.strip():
+            msg = "Landing page HTML snapshot is empty."
             return AuditResult(
                 audit_state=AuditState.FAILED_UNREADABLE_INPUT,
                 grade="Unable to Assess",
-                audit_warnings=["Landing page HTML snapshot is empty."]
+                scoring_unavailability_reason=msg,
+                audit_warnings=[msg],
+                retrieval_limitations=[msg]
             )
 
         snap_id = snapshot_id or hashlib.sha256(landing_page_html.encode('utf-8')).hexdigest()[:16]
@@ -61,19 +67,25 @@ class AuditEngine:
         warnings.extend(extract_warnings)
 
         if not blocks:
+            msg = "No text content could be extracted from the landing page snapshot."
             return AuditResult(
                 audit_state=AuditState.FAILED_UNREADABLE_INPUT,
                 grade="Unable to Assess",
-                audit_warnings=warnings or ["No text content could be extracted from the landing page."]
+                scoring_unavailability_reason=msg,
+                audit_warnings=warnings or [msg],
+                retrieval_limitations=warnings or [msg]
             )
 
         # 3. Decompose ad copy into claims (Phase 1)
         atomic_claims = self.decomposer.decompose(ad_headline, ad_description, ad_call_to_action)
         if not atomic_claims:
+            msg = "Could not decompose any recognizable claims from the provided ad copy."
             return AuditResult(
                 audit_state=AuditState.FAILED_UNREADABLE_INPUT,
                 grade="Unable to Assess",
-                audit_warnings=["Could not decompose any recognizable claims from the provided ad text."]
+                scoring_unavailability_reason=msg,
+                audit_warnings=[msg],
+                retrieval_limitations=[msg]
             )
 
         # 4. Compare claims against extracted blocks (Phase 3)
@@ -138,6 +150,7 @@ class AuditEngine:
             rejected_quotes_count=rejected_quotes,
             evidence_validity_rate=evidence_validity_rate,
             audit_warnings=warnings,
+            retrieval_limitations=warnings,
             audit_metadata={
                 "engine_version": self.VERSION,
                 "blocks_analyzed": len(blocks),

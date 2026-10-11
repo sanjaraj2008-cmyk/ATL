@@ -1,0 +1,152 @@
+{
+  "audit_status": "COMPLETED",
+  "overall_score": 52,
+  "scoring_unavailability_reason": null,
+  "scoring_methodology_version": "1.0.0-evidence-weighted",
+  "grade": "Poor Match",
+  "evidence_coverage_index": 73,
+  "evidence_prominence_index": 78,
+  "total_claims": 4,
+  "critical_issues_count": 0,
+  "regulatory_issues_count": 2,
+  "evidence_validity_rate": 100.0,
+  "individual_claims": [
+    {
+      "claim_id": "C001",
+      "ad_claim_text": "Rates From 6.9% APR",
+      "claim_materiality": "HIGH",
+      "status": "PARTIALLY_SUPPORTED",
+      "reason_code": "QUALIFIER_MISMATCH",
+      "severity": "HIGH",
+      "priority_rank": 2,
+      "regulatory_flag": true,
+      "regulatory_review_note": "Unqualified claim flagged: The ad asserts 'Rates From 6.9% APR', but page evidence limits availability to qualified sub-segments. Review for necessary qualifying disclosures.",
+      "quotation": "Most applicants get a decision the same business day. Rates from 6.9% APR for qualified borrowers.",
+      "source_location": {
+        "block_id": "B007",
+        "dom_zone": "MAIN_BODY",
+        "selector_path": "div.hero > p",
+        "start_offset": 0,
+        "end_offset": 98
+      },
+      "explanation": "Ad Promise: Headline promise: \"Rates From 6.9% APR\". Page Evidence: Inspected landing page confirms in the main body content (Block B007): \"Most applicants get a decision the same business day. Rates from 6.9% APR for qualified borrowers.\" Discrepancy: Qualification mismatch: The ad promises 'Rates From 6.9% APR' broadly, but the landing page restricts eligibility to specific subsets or conditions. Significance: Material expectation friction: Qualified consumers may feel misled when discovering fine-print exclusions or restrictive eligibility criteria not disclosed in the advertising copy. Conditions/Visibility: Displayed within body content (weight 0.75); Accompanied by asterisks, qualifying clauses, or conditional terms; Contains explicit restrictive language or eligibility qualifications Verification Certainty: FACTUAL_EVIDENCE: Grounded in deterministic DOM extraction and exact source citations.",
+      "mismatch_details": {
+        "original_ad_claim": "Headline promise: \"Rates From 6.9% APR\"",
+        "landing_page_finding": "Inspected landing page confirms in the main body content (Block B007): \"Most applicants get a decision the same business day. Rates from 6.9% APR for qualified borrowers.\"",
+        "discrepancy_description": "Qualification mismatch: The ad promises 'Rates From 6.9% APR' broadly, but the landing page restricts eligibility to specific subsets or conditions.",
+        "practical_significance": "Material expectation friction: Qualified consumers may feel misled when discovering fine-print exclusions or restrictive eligibility criteria not disclosed in the advertising copy.",
+        "conditions_and_visibility": "Displayed within body content (weight 0.75); Accompanied by asterisks, qualifying clauses, or conditional terms; Contains explicit restrictive language or eligibility qualifications",
+        "recommended_ad_fix": "Add explicit qualifying terms to \"Rates From 6.9% APR\" in ad copy (e.g., specifying eligibility criteria).",
+        "recommended_page_fix": "Clarify full terms and scope of \"Rates From 6.9% APR\" in the primary body content of the landing page.",
+        "is_factual": true,
+        "certainty_level": "FACTUAL_EVIDENCE: Grounded in deterministic DOM extraction and exact source citations."
+      },
+      "recommended_ad_fix": "Add explicit qualifying terms to \"Rates From 6.9% APR\" in ad copy (e.g., specifying eligibility criteria).",
+      "recommended_page_fix": "Clarify full terms and scope of \"Rates From 6.9% APR\" in the primary body content of the landing page."
+    },
+    {
+      "claim_id": "C003",
+      "ad_claim_text": "Same-Day Approval",
+      "claim_materiality": "HIGH",
+      "status": "MISSING",
+      "reason_code": "CLAIM_NOT_FOUND",
+      "severity": "HIGH",
+      "priority_rank": 2,
+      "regulatory_flag": false,
+      "regulatory_review_note": "Unsubstantiated ad promise: Core advertised claim 'Same-Day Approval' could not be verified on the landing page. Review to ensure destination page substantiates advertising copy.",
+      "quotation": null,
+      "source_location": null,
+      "explanation": "Ad Promise: Headline promise: \"Same-Day Approval\". Page Evidence: No mention, pricing, or qualification matching \"Same-Day Approval\" was detected across 23 inspected DOM elements on the landing page. Discrepancy: Total absence mismatch: The advertised promise 'Same-Day Approval' is completely missing from the destination landing page, offering zero confirmation to visitors. Significance: High abandonment risk: Visitors clicking specifically for this feature or offer fail to locate it immediately, eroding conversion rates and wasting paid ad spend. Conditions/Visibility: Visibility assessment: N/A (no relevant content detected in inspected DOM elements). Verification Certainty: FACTUAL_EVIDENCE: Grounded in deterministic DOM extraction and exact source citations.",
+      "mismatch_details": {
+        "original_ad_claim": "Headline promise: \"Same-Day Approval\"",
+        "landing_page_finding": "No mention, pricing, or qualification matching \"Same-Day Approval\" was detected across 23 inspected DOM elements on the landing page.",
+        "discrepancy_description": "Total absence mismatch: The advertised promise 'Same-Day Approval' is completely missing from the destination landing page, offering zero confirmation to visitors.",
+        "practical_significance": "High abandonment risk: Visitors clicking specifically for this feature or offer fail to locate it immediately, eroding conversion rates and wasting paid ad spend.",
+        "conditions_and_visibility": "Visibility assessment: N/A (no relevant content detected in inspected DOM elements).",
+        "recommended_ad_fix": "Remove \"Same-Day Approval\" from ad creative or replace with a feature verified on the landing page.",
+        "recommended_page_fix": "Add dedicated content or an explanatory section highlighting \"Same-Day Approval\" above the fold on the landing page.",
+        "is_factual": true,
+        "certainty_level": "FACTUAL_EVIDENCE: Grounded in deterministic DOM extraction and exact source citations."
+      },
+      "recommended_ad_fix": "Remove \"Same-Day Approval\" from ad creative or replace with a feature verified on the landing page.",
+      "recommended_page_fix": "Add dedicated content or an explanatory section highlighting \"Same-Day Approval\" above the fold on the landing page."
+    },
+    {
+      "claim_id": "C004",
+      "ad_claim_text": "All credit types considered",
+      "claim_materiality": "HIGH",
+      "status": "PARTIALLY_SUPPORTED",
+      "reason_code": "BURIED_DISCLAIMER",
+      "severity": "HIGH",
+      "priority_rank": 2,
+      "regulatory_flag": true,
+      "regulatory_review_note": "Disclosure prominence review recommended: Advertised promise 'All credit types considered' appears without upfront qualifications in ad copy, while landing page restricts eligibility via fine print. Flagged for clear and conspicuous disclosure evaluation.",
+      "quotation": "\u00a9 2026 Kestrel Business Funding. All rights reserved. \u00b7 Privacy \u00b7 TermsWe consider all credit profiles, including scores below 600.\nThis page is a fictional example created for the Srishti 2K26 hackathon.",
+      "source_location": {
+        "block_id": "B022",
+        "dom_zone": "FOOTER_DISCLAIMER",
+        "selector_path": "footer",
+        "start_offset": 0,
+        "end_offset": 204
+      },
+      "explanation": "Ad Promise: Description promise: \"All credit types considered\". Page Evidence: Inspected landing page confirms in the footer disclaimer (fine print) (Block B022): \"\u00a9 2026 Kestrel Business Funding. All rights reserved. \u00b7 Privacy \u00b7 TermsWe consider all credit profiles, including scores below 600.\nThis page is a fictional example created for the Srishti 2K26 hackathon.\" Discrepancy: Visibility mismatch: The ad makes a prominent upfront claim ('All credit types considered'), but the landing page relegates essential terms or caveats to buried footer disclaimers. Significance: Material expectation friction: Qualified consumers may feel misled when discovering fine-print exclusions or restrictive eligibility criteria not disclosed in the advertising copy. Conditions/Visibility: Buried in footer disclaimer / small print with low visual prominence (weight 0.25) Verification Certainty: FACTUAL_EVIDENCE: Grounded in deterministic DOM extraction and exact source citations.",
+      "mismatch_details": {
+        "original_ad_claim": "Description promise: \"All credit types considered\"",
+        "landing_page_finding": "Inspected landing page confirms in the footer disclaimer (fine print) (Block B022): \"\u00a9 2026 Kestrel Business Funding. All rights reserved. \u00b7 Privacy \u00b7 TermsWe consider all credit profiles, including scores below 600.\nThis page is a fictional example created for the Srishti 2K26 hackathon.\"",
+        "discrepancy_description": "Visibility mismatch: The ad makes a prominent upfront claim ('All credit types considered'), but the landing page relegates essential terms or caveats to buried footer disclaimers.",
+        "practical_significance": "Material expectation friction: Qualified consumers may feel misled when discovering fine-print exclusions or restrictive eligibility criteria not disclosed in the advertising copy.",
+        "conditions_and_visibility": "Buried in footer disclaimer / small print with low visual prominence (weight 0.25)",
+        "recommended_ad_fix": "Add qualification to ad copy (e.g., \"All credit types considered* (terms apply)\") to disclose restrictions upfront.",
+        "recommended_page_fix": "Elevate qualifying disclosures for \"All credit types considered\" from the footer into the hero/pricing section.",
+        "is_factual": true,
+        "certainty_level": "FACTUAL_EVIDENCE: Grounded in deterministic DOM extraction and exact source citations."
+      },
+      "recommended_ad_fix": "Add qualification to ad copy (e.g., \"All credit types considered* (terms apply)\") to disclose restrictions upfront.",
+      "recommended_page_fix": "Elevate qualifying disclosures for \"All credit types considered\" from the footer into the hero/pricing section."
+    },
+    {
+      "claim_id": "C002",
+      "ad_claim_text": "Apply in 10 Minutes",
+      "claim_materiality": "MEDIUM",
+      "status": "SUPPORTED",
+      "reason_code": "SEMANTIC_EQUIVALENT",
+      "severity": "INFO",
+      "priority_rank": 5,
+      "regulatory_flag": false,
+      "regulatory_review_note": null,
+      "quotation": "Our online application takes about 10 minutes.",
+      "source_location": {
+        "block_id": "B006",
+        "dom_zone": "MAIN_BODY",
+        "selector_path": "div.hero > h1",
+        "start_offset": 0,
+        "end_offset": 46
+      },
+      "explanation": "Ad Promise: Headline promise: \"Apply in 10 Minutes\". Page Evidence: Inspected landing page confirms in the main body content (Block B006): \"Our online application takes about 10 minutes.\" Discrepancy: No discrepancy detected. The landing page prominently and directly substantiates the advertised promise. Significance: Positive customer impact: Reinforces customer confidence and frictionless message match from ad impression to conversion. Conditions/Visibility: Displayed within body content (weight 0.75) Verification Certainty: FACTUAL_EVIDENCE: Grounded in deterministic DOM extraction and exact source citations.",
+      "mismatch_details": {
+        "original_ad_claim": "Headline promise: \"Apply in 10 Minutes\"",
+        "landing_page_finding": "Inspected landing page confirms in the main body content (Block B006): \"Our online application takes about 10 minutes.\"",
+        "discrepancy_description": "No discrepancy detected. The landing page prominently and directly substantiates the advertised promise.",
+        "practical_significance": "Positive customer impact: Reinforces customer confidence and frictionless message match from ad impression to conversion.",
+        "conditions_and_visibility": "Displayed within body content (weight 0.75)",
+        "recommended_ad_fix": "Maintain current ad phrasing (\"Apply in 10 Minutes\"); it aligns accurately with verified page content.",
+        "recommended_page_fix": "Maintain current landing page copy and prominence; message match is verified.",
+        "is_factual": true,
+        "certainty_level": "FACTUAL_EVIDENCE: Grounded in deterministic DOM extraction and exact source citations."
+      },
+      "recommended_ad_fix": "Maintain current ad phrasing (\"Apply in 10 Minutes\"); it aligns accurately with verified page content.",
+      "recommended_page_fix": "Maintain current landing page copy and prominence; message match is verified."
+    }
+  ],
+  "retrieval_limitations_and_uncertainties": [],
+  "audit_metadata": {
+    "engine_version": "1.0.0",
+    "blocks_analyzed": 23,
+    "claims_extracted": 4,
+    "snapshot_id": "abc64a9013d86ac2",
+    "citations_verified": 3,
+    "citations_rejected": 0,
+    "regulatory_concerns_flagged": 2,
+    "mode": "deterministic_offline"
+  }
+}

@@ -230,6 +230,8 @@ class AuditState(str, Enum):
 class AuditResult(BaseModel):
     audit_state: AuditState = AuditState.COMPLETED
     match_score: Optional[int] = None # 0-100 evidence-weighted, or None if failed
+    scoring_unavailability_reason: Optional[str] = None # Set when match_score is None
+    scoring_methodology_version: str = "1.0.0-evidence-weighted"
     evidence_coverage_index: Optional[int] = None # 0-100, or None
     evidence_prominence_index: Optional[int] = None # 0-100, or None if no evidence found
     grade: str # "Strong Match", "Partial Match", "Poor Match", "Unable to Assess"
@@ -245,4 +247,68 @@ class AuditResult(BaseModel):
     rejected_quotes_count: int = 0
     evidence_validity_rate: Optional[float] = None # None when reported_quotes_count == 0
     audit_warnings: List[str] = Field(default_factory=list)
+    retrieval_limitations: List[str] = Field(default_factory=list)
     audit_metadata: Dict[str, Any] = Field(default_factory=dict)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Returns valid dictionary representation conforming to Pydantic schema."""
+        return self.model_dump(mode="json")
+
+    def to_json(self, indent: int = 2) -> str:
+        """Phase 7: Return valid formatted JSON string conforming to the application schema."""
+        return self.model_dump_json(indent=indent)
+
+    def to_structured_report(self) -> Dict[str, Any]:
+        """
+        Phase 7: Returns clean, standardized structured JSON report
+        guaranteeing exact fields requested in the audit engine specification:
+        - Audit status
+        - Overall score or reason scoring is not possible
+        - Scoring methodology version
+        - Evidence coverage & prominence
+        - Individual claims, statuses, quotations, source locations, explanations, severity, corrections
+        - Uncertainties and retrieval limitations
+        """
+        claims_report = []
+        for f in self.findings:
+            item = {
+                "claim_id": f.claim_id,
+                "ad_claim_text": f.ad_claim_text,
+                "claim_materiality": f.claim_materiality.value,
+                "status": f.status.value,
+                "reason_code": f.reason_code.value,
+                "severity": f.severity.value,
+                "priority_rank": f.severity_assessment.priority_rank if f.severity_assessment else 3,
+                "regulatory_flag": f.regulatory_flag,
+                "regulatory_review_note": f.regulatory_review_note,
+                "quotation": f.primary_evidence.quote if f.primary_evidence else None,
+                "source_location": {
+                    "block_id": f.primary_evidence.block_id if f.primary_evidence else None,
+                    "dom_zone": f.primary_evidence.dom_zone.value if f.primary_evidence else None,
+                    "selector_path": f.primary_evidence.selector_path if f.primary_evidence else None,
+                    "start_offset": f.primary_evidence.source_start_offset if f.primary_evidence else None,
+                    "end_offset": f.primary_evidence.source_end_offset if f.primary_evidence else None
+                } if f.primary_evidence else None,
+                "explanation": f.explanation,
+                "mismatch_details": f.mismatch_details.model_dump() if f.mismatch_details else None,
+                "recommended_ad_fix": f.recommended_ad_fix,
+                "recommended_page_fix": f.recommended_page_fix
+            }
+            claims_report.append(item)
+
+        return {
+            "audit_status": self.audit_state.value,
+            "overall_score": self.match_score,
+            "scoring_unavailability_reason": self.scoring_unavailability_reason,
+            "scoring_methodology_version": self.scoring_methodology_version,
+            "grade": self.grade,
+            "evidence_coverage_index": self.evidence_coverage_index,
+            "evidence_prominence_index": self.evidence_prominence_index,
+            "total_claims": self.total_claims,
+            "critical_issues_count": self.critical_issues_count,
+            "regulatory_issues_count": self.regulatory_issues_count,
+            "evidence_validity_rate": self.evidence_validity_rate,
+            "individual_claims": claims_report,
+            "retrieval_limitations_and_uncertainties": self.retrieval_limitations or self.audit_warnings,
+            "audit_metadata": self.audit_metadata
+        }
