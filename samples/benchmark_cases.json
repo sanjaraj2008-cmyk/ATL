@@ -1,0 +1,37 @@
+[
+  {
+    "id": "case_01",
+    "title": "Canonical Case 1: Trial Duration & Payment Contradiction",
+    "ad_headline": "Get a 30-day free trial",
+    "ad_description": "Start using our project management software today. No credit card required.",
+    "html": "<html>\n  <head><title>ProjectFlow</title></head>\n  <body>\n    <header>\n      <h1>Start your free 7-day trial</h1>\n    </header>\n    <main>\n      <p>Explore our project management tools and streamline team tasks.</p>\n      <p>Enter your payment details to continue.</p>\n    </main>\n  </body>\n</html>"
+  },
+  {
+    "id": "case_02",
+    "title": "Canonical Case 2: Loan Approval Speed (Evidence Gap / Absence)",
+    "ad_headline": "Get your loan approved on the same day!",
+    "ad_description": "Fast personal loans with competitive interest rates. Apply online now.",
+    "html": "<html>\n  <head><title>QuickFinance</title></head>\n  <body>\n    <h1>Personal Loans Made Simple</h1>\n    <p>Low rates starting from 5.4% APR. Completely digital application process.</p>\n    <button>Apply Online</button>\n  </body>\n</html>"
+  },
+  {
+    "id": "case_03",
+    "title": "Canonical Case 3: Fully Supported Landing Page",
+    "ad_headline": "30-Day Free Trial",
+    "ad_description": "No credit card required. Modern project management software for fast-moving teams.",
+    "html": "<html>\n  <head><title>TeamSync</title></head>\n  <body>\n    <header>\n      <h1>Start your 30-day free trial</h1>\n      <p>No credit card required to get started.</p>\n    </header>\n    <main>\n      <p>Modern project management software built for fast-moving agile teams.</p>\n    </main>\n  </body>\n</html>"
+  },
+  {
+    "id": "case_04",
+    "title": "Canonical Case 4: Scope & Qualifier Mismatch ('Up to 50%')",
+    "ad_headline": "Mega Summer Sale - 50% off",
+    "ad_description": "Enjoy half-off savings across our entire clothing catalog.",
+    "html": "<html>\n  <head><title>FashionOutlet</title></head>\n  <body>\n    <h1>Summer Clearance Event</h1>\n    <p>Get up to 50% discount on selected seasonal inventory while supplies last.</p>\n  </body>\n</html>"
+  },
+  {
+    "id": "case_05",
+    "title": "Canonical Case 5: Buried Footer Fine-Print Disclaimer",
+    "ad_headline": "Free Forever for Students",
+    "ad_description": "Get free cloud computing capacity for student projects.",
+    "html": "<html>\n  <head><title>CloudDev</title></head>\n  <body>\n    <h1>Developer Cloud Workspaces</h1>\n    <p>Flexible compute plans starting at $25/month for commercial users.</p>\n    <footer>\n      <small>* Free forever for students with verified educational institutions.</small>\n    </footer>\n  </body>\n</html>"
+  }
+]

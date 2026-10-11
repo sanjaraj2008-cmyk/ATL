@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>metic.auditor — Message Match Verification & Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Instrument Serif + Plus Jakarta Sans + JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Three.js Library for 3D Loupe / Glass Magnifier & Custom GLTF Models -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+  <!-- Custom Metic Design System -->
+  <link rel="stylesheet" href="/static/effects.css">
+  <style>
+    #canvas-container {
+      position: relative;
+      width: 100%;
+      height: 480px;
+      overflow: hidden;
+    }
+    #three-canvas {
+      width: 100%;
+      height: 100%;
+      outline: none;
+    }
+  </style>
+</head>
+<body class="architectural-grid relative min-h-screen flex flex-col">
+
+  <!-- Exact Metic.Studio X-Ray Lens Layer (Revealed under the 3D lens) -->
+  <div class="xray-lens" id="xrayLens" aria-hidden="true"></div>
+  <div class="scan-status" id="scanStatus"><strong>●</strong> SCANNING <span id="scanTarget">page surface</span></div>
+
+  <!-- 3D Magnifying Glass Stage (Moves everywhere across full screen on double-click) -->
+  <div id="stage" class="cursor-grab active:cursor-grabbing">
+    <canvas id="scene" aria-label="Interactive 3D magnifying glass"></canvas>
+    <div class="lens-copy" id="lensCopy">Pick<br>me up.<div class="lens-dot"></div><div class="lens-arrow">↘</div></div>
+    <div class="hint">Double-click to pick up · drag anywhere · release to return</div>
+  </div>
+
+  <!-- FIXED NAVIGATION (METIC STYLE) -->
+  <header class="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur-md precision-border-b px-8 py-3.5 flex items-center justify-between transition-colors">
+    <div class="flex items-center space-x-6">
+      <a href="javascript:switchView('landing')" class="flex items-baseline text-2xl font-bold tracking-tight text-[var(--ink)] no-underline">
+        <span style="font-family: var(--font-sans);">auditor</span><span class="metic-dot"></span>
+      </a>
+      <span class="measure-tag hidden md:inline-block border-l border-[var(--line-border)] pl-4">
+        AD-TO-PAGE EVIDENCE AUDITOR · PS-03
+      </span>
+    </div>
+
+    <!-- Center Navigation Pill -->
+    <nav class="flex items-center bg-[var(--surface-card)] rounded-full border border-[var(--line-strong)] p-1 shadow-sm">
+      <button onclick="switchView('landing')" id="nav-landing" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink)] bg-[var(--paper)] shadow-sm">
+        Chapter 01 · Editorial
+      </button>
+      <button onclick="switchView('workspace')" id="nav-workspace" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink-secondary)] hover:text-[var(--ink)]">
+        Chapter 02 · Studio
+      </button>
+      <button onclick="switchView('history')" id="nav-history" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink-secondary)] hover:text-[var(--ink)]">
+        Archive (<span id="history-count">0</span>)
+      </button>
+    </nav>
+
+    <!-- Theme & Quick Action Controls -->
+    <div class="flex items-center space-x-4">
+      <button onclick="toggleTheme()" class="w-9 h-9 rounded-full border border-[var(--line-strong)] flex items-center justify-center text-[var(--ink)] hover:bg-[var(--surface-card)] transition" title="Toggle Theme">
+        <i data-lucide="moon" id="theme-icon" class="w-4 h-4"></i>
+      </button>
+      <button onclick="switchView('workspace')" class="btn-metic-primary !py-2 !px-5 text-xs">
+        <span>Start Audit</span>
+        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTAINER -->
+  <main class="flex-1 w-full max-w-7xl mx-auto px-8 py-10 relative">
+
+    <!-- =========================================================================
+         VIEW 1: EDITORIAL SHOWCASE WITH 3D LOUPE INSPECTOR
+         ========================================================================= -->
+    <section id="view-landing" class="space-y-24 py-8">
+      
+      <!-- Editorial Hero Header -->
+      <div class="grid grid-cols-12 gap-8 items-center pt-8 pb-16 precision-border-b">
+        
+        <div class="col-span-12 lg:col-span-7 space-y-6">
+          <div class="flex items-center space-x-3">
+            <span class="measure-tag">01 / GROUNDED VERIFICATION</span>
+            <span class="h-px w-8 bg-[var(--line-strong)]"></span>
+            <span class="measure-tag">NO HALLUCINATIONS</span>
+          </div>
+
+          <h1 class="hero-title editorial-title text-6xl md:text-8xl leading-[0.95] text-[var(--ink)]" data-scan="Hero Promise Headline">
+            Take a closer look<br>
+            <span class="italic text-[var(--ink-secondary)]">at your ad promises.</span>
+          </h1>
+
+          <p class="text-lg md:text-xl text-[var(--ink-secondary)] max-w-xl font-normal leading-relaxed pt-2" data-scan="Grounding Verification Principle">
+            An advertisement promises a 30-day trial; the landing page only offers seven. Build an auditor that proves every finding using verified, immutable source text.
+          </p>
+
+          <div class="pt-4 flex items-center space-x-4">
+            <button onclick="switchView('workspace')" class="btn-metic-primary" data-scan="Audit Studio Launcher CTA">
+              <span>Open Audit Studio</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"></path></svg>
+            </button>
+            <a href="#rules-section" class="btn-metic-secondary" data-scan="Auditor 4 Core Rules">
+              <span>The 4 Rules</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- 3D Interactive Model Card Container -->
+        <div class="col-span-12 lg:col-span-5 flex flex-col items-center justify-center relative">
+          <div id="stage-placeholder" class="w-full relative h-[480px] rounded-3xl precision-border-l precision-border-r precision-border-t precision-border-b bg-[var(--surface-card)]/60 p-6 shadow-xl overflow-hidden flex flex-col justify-between" data-scan="Auditor Precision Loupe Station">
+            <!-- Architectural Background Telemetry (Inverted in high-contrast x-ray when resting) -->
+            <div class="flex items-center justify-between text-[11px] font-mono text-[var(--ink-secondary)]">
+              <span class="font-semibold tracking-wider text-[var(--accent)]">● OPTICAL SPEC_03</span>
+              <span class="px-2 py-0.5 rounded bg-[var(--line-border)] text-[var(--ink)]">REST HOME · 24FPS</span>
+            </div>
+
+            <div class="space-y-3 font-mono text-xs text-[var(--ink-secondary)] max-w-xs">
+              <div class="flex justify-between border-b border-[var(--line-border)] pb-1.5">
+                <span>INSPECTOR</span>
+                <span class="text-[var(--ink)] font-bold">X-RAY BLUEPRINT</span>
+              </div>
+              <div class="flex justify-between border-b border-[var(--line-border)] pb-1.5">
+                <span>VERIFICATION</span>
+                <span class="text-emerald-600 font-semibold">100% GROUNDED</span>
+              </div>
+              <div class="flex justify-between border-b border-[var(--line-border)] pb-1.5">
+                <span>BENCHMARK DATA</span>
+                <span class="text-[var(--ink)]">60 TEST SUITES</span>
+              </div>
+              <div class="flex justify-between">
+                <span>INTERACTION</span>
+                <span class="text-[var(--accent)] font-semibold">DOUBLE-CLICK TO PICK UP</span>
+              </div>
+            </div>
+
+            <div class="text-[10px] font-mono text-[var(--ink-muted)] flex justify-between items-center border-t border-[var(--line-border)] pt-3">
+              <span>DRAG ANYWHERE ACROSS SITE</span>
+              <span>RELEASE TO RETURN</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Architectural Methodology Grid (4 Metic Principles) -->
+      <section id="rules-section" class="space-y-8">
+        <div class="flex items-center justify-between pb-4 precision-border-b">
+          <span class="measure-tag">02 / CORE METHODOLOGY</span>
+          <span class="measure-tag">ARCHITECTURAL DISCIPLINE</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+          <div class="space-y-4 precision-border-r pr-6" data-scan="Methodology Rule 01: Grounding Quote Verification">
+            <span class="font-mono text-xs text-[var(--accent)] font-bold">01. GROUNDING</span>
+            <h3 class="editorial-title text-3xl text-[var(--ink)]">Every quote exists.</h3>
+            <p class="text-xs text-[var(--ink-secondary)] leading-relaxed">
+              Every finding must quote the exact page text. If the evidence quote cannot be verified in the DOM, it is strictly rejected.
+            </p>
+          </div>
+
+          <div class="space-y-4 precision-border-r pr-6" data-scan="Methodology Rule 02: Absence Separation (NOT_FOUND)">
+            <span class="font-mono text-xs text-[var(--accent)] font-bold">02. ABSENCE ≠ LIE</span>
+            <h3 class="editorial-title text-3xl text-[var(--ink)]">Evidence gaps.</h3>
+            <p class="text-xs text-[var(--ink-secondary)] leading-relaxed">
+              Missing evidence is classified as <code class="bg-[var(--surface-card)] px-1 py-0.5 rounded text-[var(--ink)] font-mono text-[10px]">NOT_FOUND</code>, never as a contradiction. Absence is an evidence gap, not proven falsehood.
+            </p>
+          </div>
+
+          <div class="space-y-4 precision-border-r pr-6" data-scan="Methodology Rule 03: Heuristic DOM Hierarchy">
+            <span class="font-mono text-xs text-[var(--accent)] font-bold">03. HIERARCHY</span>
+            <h3 class="editorial-title text-3xl text-[var(--ink)]">Heuristic DOM zones.</h3>
+            <p class="text-xs text-[var(--ink-secondary)] leading-relaxed">
+              Preserves DOM order and headings. Distinguishes prominent Hero promises from buried disclaimers hidden in footer footnotes.
+            </p>
+          </div>
+
+          <div class="space-y-4" data-scan="Methodology Rule 04: Anti-Masking Critical Banner">
+            <span class="font-mono text-xs text-[var(--accent)] font-bold">04. ANTI-MASKING</span>
+            <h3 class="editorial-title text-3xl text-[var(--ink)]">Critical flags.</h3>
+            <p class="text-xs text-[var(--ink-secondary)] leading-relaxed">
+              High average scores never conceal material legal or pricing contradictions. Severe mismatches raise an unmissable red banner.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Pre-Loaded Benchmark Pairs Preview -->
+      <section class="space-y-8 pt-8">
+        <div class="flex items-center justify-between pb-4 precision-border-b">
+          <span class="measure-tag">03 / BENCHMARK CANONICAL PAIRS</span>
+          <span class="measure-tag">SAMPLES FROM OFFICIAL 60-PAIR SUITE</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between space-y-4">
+            <div>
+              <span class="status-pill status-contradicted">Canonical 01</span>
+              <h4 class="editorial-title text-2xl mt-3 text-[var(--ink)]">Trial & Payment Clash</h4>
+              <p class="text-xs text-[var(--ink-secondary)] mt-1.5">
+                Ad: “30-day free trial. No credit card required.”<br>
+                Page: “7-day trial. Enter payment details.”
+              </p>
+            </div>
+            <button onclick="loadBenchmarkDirect(0)" class="btn-metic-secondary !text-xs !py-1.5 self-start">
+              <span>Load in Studio</span>
+            </button>
+          </div>
+
+          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between space-y-4">
+            <div>
+              <span class="status-pill status-not-found">Canonical 02</span>
+              <h4 class="editorial-title text-2xl mt-3 text-[var(--ink)]">Absent Loan Speed</h4>
+              <p class="text-xs text-[var(--ink-secondary)] mt-1.5">
+                Ad: “Get your loan approved on the same day!”<br>
+                Page: No mention of approval turnaround.
+              </p>
+            </div>
+            <button onclick="loadBenchmarkDirect(1)" class="btn-metic-secondary !text-xs !py-1.5 self-start">
+              <span>Load in Studio</span>
+            </button>
+          </div>
+
+          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between space-y-4">
+            <div>
+              <span class="status-pill status-supported">Canonical 03</span>
+              <h4 class="editorial-title text-2xl mt-3 text-[var(--ink)]">Harmonious Match</h4>
+              <p class="text-xs text-[var(--ink-secondary)] mt-1.5">
+                Ad: “30-Day Free Trial. No card required.”<br>
+                Page: Exact matching headline and body text.
+              </p>
+            </div>
+            <button onclick="loadBenchmarkDirect(2)" class="btn-metic-secondary !text-xs !py-1.5 self-start">
+              <span>Load in Studio</span>
+            </button>
+          </div>
+        </div>
+      </section>
+
+    </section>
+
+    <!-- =========================================================================
+         VIEW 2: AUDIT WORKSPACE STUDIO
+         ========================================================================= -->
+    <section id="view-workspace" class="space-y-8">
+      <div class="flex flex-col md:flex-row md:items-end justify-between pb-6 precision-border-b gap-4">
+        <div>
+          <span class="measure-tag">STUDIO · RUNTIME</span>
+          <h2 class="editorial-title text-4xl text-[var(--ink)] mt-1">Audit Configuration</h2>
+        </div>
+
+        <div class="flex items-center space-x-3">
+          <span class="measure-tag">PRESETS:</span>
+          <select id="preset-selector" onchange="loadPreset(this.value)" class="bg-[var(--surface-card)] border border-[var(--line-strong)] text-xs rounded-full px-4 py-2 text-[var(--ink)] font-mono focus:outline-none focus:border-[var(--accent)] cursor-pointer">
+            <option value="">Choose benchmark preset...</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="editorial-card rounded-2xl p-8 precision-border-b">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+          <div class="space-y-5">
+            <div class="flex items-center justify-between">
+              <span class="measure-tag">SOURCE A · SEARCH AD</span>
+              <span class="text-[11px] font-mono text-[var(--ink-muted)]">PROMISES & CLAIMS</span>
+            </div>
+
+            <div>
+              <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)] mb-1.5">Ad Headline</label>
+              <input type="text" id="input-headline" value="Get a 30-day free trial" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl px-4 py-3 text-sm text-[var(--ink)] font-sans focus:outline-none focus:border-[var(--accent)] transition">
+            </div>
+
+            <div>
+              <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)] mb-1.5">Ad Description</label>
+              <textarea id="input-desc" rows="4" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl p-4 text-sm text-[var(--ink)] font-sans focus:outline-none focus:border-[var(--accent)] transition leading-relaxed">Start using our project management software today. No credit card required.</textarea>
+            </div>
+          </div>
+
+          <div class="space-y-5">
+            <div class="flex items-center justify-between">
+              <span class="measure-tag">SOURCE B · LANDING PAGE</span>
+              <div class="flex items-center space-x-2">
+                <input type="file" id="file-upload" onchange="handleFileUpload(event)" accept=".html,.htm" class="hidden">
+                <button onclick="document.getElementById('file-upload').click()" class="text-xs font-mono text-[var(--accent)] hover:underline flex items-center space-x-1">
+                  <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+                  <span>Upload HTML</span>
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)] mb-1.5">Landing Page Snapshot (HTML)</label>
+              <textarea id="input-html" rows="7" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl p-4 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[var(--accent)] transition leading-relaxed"><html><body><h1>Start your free 7-day trial</h1><p>Enter your payment details to continue.</p></body></html></textarea>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-8 pt-6 precision-border-t flex items-center justify-between">
+          <span class="text-xs font-mono text-[var(--ink-muted)]">
+            DETERMINISTIC EVALUATION · TWO-TIER QUOTE VERIFICATION
+          </span>
+
+          <button onclick="executeAudit()" id="btn-run-audit" class="btn-metic-primary">
+            <span>Verify Message Match</span>
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"></path></svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Critical Marketing Liability Alert Banner -->
+      <div id="liability-banner" class="hidden border border-red-400 bg-red-50 dark:bg-red-950/40 p-6 rounded-2xl text-red-900 dark:text-red-200 flex items-start space-x-4 shadow-sm">
+        <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600 shrink-0 mt-0.5"></i>
+        <div>
+          <h4 class="font-bold text-red-600 dark:text-red-400 font-mono text-sm uppercase tracking-wider">Critical Marketing Liability Flag</h4>
+          <p class="text-sm mt-1 leading-relaxed">
+            One or more high-materiality claims (such as trial length, pricing, or payment friction) are explicitly contradicted by verified page evidence.
+          </p>
+        </div>
+      </div>
+
+      <!-- Results Executive Summary & Findings -->
+      <div id="results-container" class="hidden space-y-8">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between">
+            <span class="measure-tag">MATCH SCORE</span>
+            <div class="text-5xl editorial-title text-[var(--ink)] my-3" id="res-score">--/100</div>
+            <span class="status-pill status-supported w-max" id="res-grade">Calculating...</span>
+          </div>
+
+          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between">
+            <span class="measure-tag">EVIDENCE COVERAGE</span>
+            <div class="text-5xl editorial-title text-[var(--ink)] my-3" id="res-coverage">--%</div>
+            <span class="text-xs text-[var(--ink-muted)] font-mono">Assessed Claims Found</span>
+          </div>
+
+          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between">
+            <span class="measure-tag">EVIDENCE PROMINENCE</span>
+            <div class="text-5xl editorial-title text-[var(--ink)] my-3" id="res-prominence">--%</div>
+            <span class="text-xs text-[var(--ink-muted)] font-mono">Hero vs Footer Weight</span>
+          </div>
+
+          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between">
+            <span class="measure-tag">QUOTE VALIDITY RATE</span>
+            <div class="text-5xl editorial-title text-emerald-600 my-3" id="res-validity">100%</div>
+            <span class="text-xs text-[var(--ink-muted)] font-mono">Zero Hallucinations</span>
+          </div>
+        </div>
+
+        <div class="space-y-6 pt-4">
+          <div class="flex items-center justify-between pb-3 precision-border-b">
+            <div>
+              <span class="measure-tag">AUDIT FINDINGS (<span id="findings-count">0</span>)</span>
+              <h3 class="editorial-title text-3xl text-[var(--ink)] mt-0.5">Itemized Claim Discrepancies</h3>
+            </div>
+
+            <div class="flex items-center space-x-3">
+              <button onclick="downloadReport('csv')" class="btn-metic-secondary !text-xs !py-1.5 !px-4">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>CSV Report</span>
+              </button>
+              <button onclick="downloadReport('json')" class="btn-metic-secondary !text-xs !py-1.5 !px-4">
+                <i data-lucide="file-code" class="w-3.5 h-3.5"></i>
+                <span>JSON Report</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="findings-list" class="space-y-5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- =========================================================================
+         VIEW 3: AUDIT ARCHIVE / HISTORY
+         ========================================================================= -->
+    <section id="view-history" class="hidden space-y-6">
+      <div class="flex items-center justify-between pb-4 precision-border-b">
+        <div>
+          <span class="measure-tag">SESSION ARCHIVE</span>
+          <h2 class="editorial-title text-4xl text-[var(--ink)]">Audit History</h2>
+        </div>
+        <button onclick="clearHistory()" class="btn-metic-secondary !text-xs !py-1.5 text-red-500 hover:text-red-600">
+          <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+          <span>Clear Archive</span>
+        </button>
+      </div>
+
+      <div id="history-list" class="space-y-4">
+        <p class="text-[var(--ink-muted)] text-sm font-mono italic">No audits performed in this session yet.</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Editorial Footer -->
+  <footer class="precision-border-t bg-[var(--paper)] py-8 px-8 mt-20 transition-colors">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4 text-xs font-mono text-[var(--ink-muted)]">
+      <div>
+        <span>metic.auditor · Hand-crafted audit architecture for Srishti 2K26</span>
+      </div>
+      <div class="flex items-center space-x-6">
+        <span>60 Benchmark Pairs Supported</span>
+        <span>Deterministic Grounding</span>
+        <span>Fixed Scoring Model</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
