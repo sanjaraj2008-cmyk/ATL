@@ -157,12 +157,14 @@ if run_audit or selected_case is not None:
             status_badge_class = {
                 ClaimStatus.SUPPORTED: "badge-supported",
                 ClaimStatus.CONTRADICTED: "badge-contradicted",
+                ClaimStatus.MISSING: "badge-not-found",
                 ClaimStatus.NOT_FOUND: "badge-not-found",
                 ClaimStatus.PARTIALLY_SUPPORTED: "badge-partial",
+                ClaimStatus.UNVERIFIABLE: "badge-not-found",
                 ClaimStatus.AMBIGUOUS: "badge-not-found"
             }.get(finding.status, "badge-partial")
 
-            severity_icon = "🔴" if finding.severity == Severity.CRITICAL or finding.severity == Severity.HIGH else ("🟡" if finding.severity == Severity.MEDIUM else "🟢")
+            severity_icon = "🔴" if finding.severity in (Severity.CRITICAL, Severity.HIGH) else ("🟡" if finding.severity == Severity.MEDIUM else "🟢")
 
             with st.container():
                 st.markdown(f"""
@@ -174,12 +176,17 @@ if run_audit or selected_case is not None:
                 </div>
                 """, unsafe_allow_html=True)
 
+                if finding.regulatory_flag and finding.regulatory_review_note:
+                    st.warning(f"⚖ **Compliance / Regulatory Note:** {finding.regulatory_review_note}")
+
                 if finding.primary_evidence:
                     verified_icon = "✔ Verified against source DOM" if finding.primary_evidence.is_verified else "❌ Unverified"
+                    offsets_info = f" | Offsets: [{finding.primary_evidence.source_start_offset}:{finding.primary_evidence.source_end_offset}]" if finding.primary_evidence.source_start_offset is not None else ""
+                    selector_info = f" | Selector: <code>{finding.primary_evidence.selector_path}</code>" if finding.primary_evidence.selector_path else ""
                     st.markdown(f"""
                     <div class="evidence-box">
                         <b>Page Evidence Quote:</b> “{finding.primary_evidence.quote}”<br>
-                        <small>📍 <b>Location:</b> {finding.primary_evidence.dom_zone.value} (Tag: <code>&lt;{finding.primary_evidence.tag_name}&gt;</code>, Block: <code>{finding.primary_evidence.block_id}</code>) | {verified_icon}</small>
+                        <small>📍 <b>Location:</b> {finding.primary_evidence.dom_zone.value} (Tag: <code>&lt;{finding.primary_evidence.tag_name}&gt;</code>, Block: <code>{finding.primary_evidence.block_id}</code>{selector_info}){offsets_info} | {verified_icon}</small>
                     </div>
                     """, unsafe_allow_html=True)
 
@@ -203,6 +210,7 @@ if run_audit or selected_case is not None:
                 "Reason Code": f.reason_code.value,
                 "Materiality": f.claim_materiality.value,
                 "Severity": f.severity.value,
+                "Regulatory Flag": f.regulatory_flag,
                 "Evidence Quote": f.primary_evidence.quote if f.primary_evidence else "None",
                 "Evidence Zone": f.primary_evidence.dom_zone.value if f.primary_evidence else "None",
                 "Quote Verified": f.primary_evidence.is_verified if f.primary_evidence else False,
@@ -218,5 +226,5 @@ if run_audit or selected_case is not None:
             csv_str = df_export.to_csv(index=False).encode('utf-8')
             st.download_button("📥 Download Report (CSV)", data=csv_str, file_name="message_match_audit_report.csv", mime="text/csv", use_container_width=True)
         with d_col2:
-            json_str = result.model_dump_json(indent=2)
-            st.download_button("📥 Download Report (JSON)", data=json_str, file_name="message_match_audit_report.json", mime="application/json", use_container_width=True)
+            structured_json_str = json.dumps(result.to_structured_report(), indent=2)
+            st.download_button("📥 Download Structured Report (JSON)", data=structured_json_str, file_name="message_match_audit_report.json", mime="application/json", use_container_width=True)
