@@ -691,7 +691,9 @@ function renderAuditResults(data) {
     let statusClass = "status-partial";
     if (f.status === "SUPPORTED") statusClass = "status-supported";
     else if (f.status === "CONTRADICTED") statusClass = "status-contradicted";
-    else if (f.status === "NOT_FOUND") statusClass = "status-not-found";
+    else if (f.status === "NOT_FOUND" || f.status === "MISSING") statusClass = "status-not-found";
+    else if (f.status === "PARTIALLY_SUPPORTED") statusClass = "status-partial";
+    else if (f.status === "UNVERIFIABLE") statusClass = "status-partial";
 
     const isCritical = f.severity === "CRITICAL" || f.severity === "HIGH";
     const borderIndicator = isCritical ? "border-l-4 border-l-[var(--accent)]" : "border-l-4 border-l-[var(--line-strong)]";
@@ -699,8 +701,23 @@ function renderAuditResults(data) {
     const card = document.createElement('div');
     card.className = `editorial-card p-7 rounded-2xl ${borderIndicator}`;
 
+    let regulatoryHtml = '';
+    if (f.regulatory_flag && f.regulatory_review_note) {
+      regulatoryHtml = `
+        <div class="mt-3.5 p-3.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200 text-xs">
+          <div class="font-bold font-mono uppercase tracking-wider mb-1 flex items-center space-x-1.5">
+            <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i>
+            <span>Potential Compliance / Disclosure Review</span>
+          </div>
+          <p class="leading-relaxed font-sans">${f.regulatory_review_note}</p>
+        </div>
+      `;
+    }
+
     let evidenceHtml = '';
     if (f.primary_evidence) {
+      const offsetsStr = f.primary_evidence.source_start_offset !== null && f.primary_evidence.source_start_offset !== undefined ? ` | Offsets: [${f.primary_evidence.source_start_offset}:${f.primary_evidence.source_end_offset}]` : '';
+      const selectorStr = f.primary_evidence.selector_path ? ` | Selector: <code>${f.primary_evidence.selector_path}</code>` : '';
       evidenceHtml = `
         <div class="mt-4 p-4 rounded-xl bg-[var(--paper)] precision-border-l border-l-[var(--accent)] border border-[var(--line-border)]">
           <div class="flex flex-wrap items-center justify-between text-xs font-mono text-[var(--ink-secondary)] mb-1.5">
@@ -708,7 +725,7 @@ function renderAuditResults(data) {
               <i data-lucide="check" class="w-3.5 h-3.5"></i>
               <span>VERIFIED IN SOURCE DOM</span>
             </span>
-            <span>ZONE: <b class="text-[var(--ink)]">${f.primary_evidence.dom_zone}</b> (&lt;${f.primary_evidence.tag_name}&gt;, Block ${f.primary_evidence.block_id})</span>
+            <span>ZONE: <b class="text-[var(--ink)]">${f.primary_evidence.dom_zone}</b> (&lt;${f.primary_evidence.tag_name}&gt;, Block ${f.primary_evidence.block_id}${selectorStr})${offsetsStr}</span>
           </div>
           <p class="font-mono text-sm text-[var(--ink)] italic pl-1">"${f.primary_evidence.quote}"</p>
         </div>
@@ -733,6 +750,7 @@ function renderAuditResults(data) {
         </div>
       </div>
 
+      ${regulatoryHtml}
       ${evidenceHtml}
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-4 precision-border-t text-xs">

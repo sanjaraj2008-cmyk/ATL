@@ -1,6 +1,8 @@
 import os
 import sys
 import json
+import csv
+from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -13,6 +15,8 @@ sys.path.insert(0, BASE_DIR)
 from core.audit_engine import AuditEngine
 from core.schemas import AuditResult
 
+DATASET_DIR = r"c:\Users\SANJAY RAJ\Downloads\Srishti-2K26-Datasets-All\PS-03_message_match_auditor_dataset\PS-03_message_match_auditor"
+
 app = FastAPI(title="Ad-to-Landing-Page Message Match Auditor API")
 
 engine = AuditEngine()
@@ -23,7 +27,7 @@ class AuditRequest(BaseModel):
     landing_page_html: str
     ad_call_to_action: Optional[str] = None
 
-@app.post("/api/audit", response_model=AuditResult)
+@app.post("/api/audit")
 def run_audit(req: AuditRequest):
     try:
         result = engine.audit(
@@ -32,17 +36,57 @@ def run_audit(req: AuditRequest):
             landing_page_html=req.landing_page_html,
             ad_call_to_action=req.ad_call_to_action
         )
-        return result
+        return result.to_dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/presets")
 def get_presets():
+    presets = []
+    # 1. Canonical benchmark cases
     preset_file = os.path.join(BASE_DIR, "samples", "benchmark_cases.json")
     if os.path.exists(preset_file):
-        with open(preset_file, "r", encoding="utf-8") as f:
+        try:
+            with open(preset_file, "r", encoding="utf-8") as f:
+                presets.extend(json.load(f))
+        except Exception:
+            pass
+
+    # 2. Complete 60 pairs from the Srishti-2K26 benchmark dataset
+    ads_csv = os.path.join(DATASET_DIR, "ads.csv")
+    if os.path.exists(ads_csv):
+        try:
+            with open(ads_csv, "r", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    snap_path = os.path.join(DATASET_DIR, row["snapshot_file"])
+                    html_content = ""
+                    if os.path.exists(snap_path):
+                        with open(snap_path, "r", encoding="utf-8") as sf:
+                            html_content = sf.read()
+
+                    headlines = " | ".join(filter(None, [row.get("headline_1", ""), row.get("headline_2", ""), row.get("headline_3", "")]))
+                    desc = " ".join(filter(None, [row.get("description_1", ""), row.get("description_2", "")]))
+
+                    presets.append({
+                        "id": row["pair_id"],
+                        "title": f"Pair {row['pair_id']}: {row['advertiser']} ({headlines[:35]}...)",
+                        "ad_headline": headlines,
+                        "ad_description": desc,
+                        "html": html_content
+                    })
+        except Exception:
+            pass
+
+    return presets
+
+@app.get("/api/report")
+def get_report(req_id: Optional[str] = None):
+    sample_file = os.path.join(BASE_DIR, "sample_audit_report.json")
+    if os.path.exists(sample_file):
+        with open(sample_file, "r", encoding="utf-8") as f:
             return json.load(f)
-    return []
+    return {"message": "Run an audit first to generate report."}
 
 # Serve Static UI files
 STATIC_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "static")
@@ -57,4 +101,4 @@ def serve_index():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run("server:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000)
