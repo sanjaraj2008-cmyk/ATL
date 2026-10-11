@@ -17,7 +17,7 @@ class ClaimMatcher:
         self.verifier = EvidenceVerifier()
 
     def evaluate_claim(self, claim: AtomicClaim, blocks: List[DOMBlock]) -> AuditFinding:
-        # 1. Route by claim type for specialized deterministic matching
+        # Phase 3: Route by claim type for specialized evidence evaluation
         if claim.claim_type == ClaimType.TRIAL_DURATION:
             return self._match_trial_duration(claim, blocks)
         elif claim.claim_type == ClaimType.REQUIREMENT_FRICTION:
@@ -26,6 +26,14 @@ class ClaimMatcher:
             return self._match_approval_timeline(claim, blocks)
         elif claim.claim_type == ClaimType.PRICING_DISCOUNT:
             return self._match_discount(claim, blocks)
+        elif claim.claim_type == ClaimType.PRICE_POINT:
+            return self._match_price_point(claim, blocks)
+        elif claim.claim_type == ClaimType.GUARANTEE:
+            return self._match_guarantee(claim, blocks)
+        elif claim.claim_type == ClaimType.PRODUCT_CAPABILITY:
+            return self._match_capability(claim, blocks)
+        elif claim.claim_type == ClaimType.AVAILABILITY_CONDITION:
+            return self._match_condition(claim, blocks)
         else:
             return self._match_general_claim(claim, blocks)
 
@@ -490,4 +498,317 @@ class ClaimMatcher:
             explanation="This general feature or statement was not explicitly found in page content.",
             recommended_ad_fix="Align ad description with features actually highlighted on page.",
             recommended_page_fix="Add descriptive copy supporting this product capability."
+        )
+
+    def _match_price_point(self, claim: AtomicClaim, blocks: List[DOMBlock]) -> AuditFinding:
+        expected_num = claim.numeric.value if claim.numeric else None
+        is_apr = claim.numeric and claim.numeric.unit == "percent"
+
+        found_support = None
+        found_contradiction = None
+        found_partial = None
+
+        for b in blocks:
+            text_lower = b.normalized_text.lower()
+            if is_apr:
+                match = re.search(r'(\d+(?:\.\d+)?)\s*%\s*apr', text_lower)
+                if match:
+                    val = Decimal(match.group(1))
+                    verified, passage = self.verifier.verify_quote(b.raw_text, blocks)
+                    if not verified:
+                        continue
+                    if expected_num and val == expected_num:
+                        if b.has_conditions or "qualified" in text_lower or b.dom_zone == DOMZone.FOOTER_DISCLAIMER:
+                            found_partial = (passage, val, "requires qualification or terms")
+                        else:
+                            found_support = passage
+                    elif expected_num and val != expected_num:
+                        found_contradiction = (passage, val)
+            else:
+                match = re.search(r'\$(\d+(?:\.\d+)?)', text_lower)
+                if match:
+                    val = Decimal(match.group(1))
+                    verified, passage = self.verifier.verify_quote(b.raw_text, blocks)
+                    if not verified:
+                        continue
+                    if expected_num and val == expected_num:
+                        if b.has_conditions or b.dom_zone == DOMZone.FOOTER_DISCLAIMER:
+                            found_partial = (passage, val, "conditions or billing caveats apply")
+                        else:
+                            found_support = passage
+                    elif expected_num and val != expected_num and val > expected_num:
+                        found_contradiction = (passage, val)
+
+        if found_contradiction:
+            passage, val = found_contradiction
+            unit_str = "% APR" if is_apr else "$"
+            return AuditFinding(
+                claim_id=claim.claim_id,
+                canonical_id=claim.canonical_id,
+                ad_claim_text=claim.text,
+                claim_materiality=claim.materiality,
+                status=ClaimStatus.CONTRADICTED,
+                reason_code=ReasonCode.NUMERIC_CONTRADICTION,
+                severity=Severity.HIGH,
+                confidence=Confidence.HIGH,
+                comparison=ComparisonRecord(
+                    claim_id=claim.claim_id,
+                    subject_match=True,
+                    predicate_match=True,
+                    numeric_match=False,
+                    evidence_passages=[passage]
+                ),
+                primary_evidence=passage,
+                explanation=f"Ad promises {unit_str}{expected_num}, but landing page explicitly states {unit_str}{val}.",
+                recommended_ad_fix=f"Update advertised price or rate to match landing page ({unit_str}{val}).",
+                recommended_page_fix=f"Honor the advertised price or rate of {unit_str}{expected_num} on the page."
+            )
+
+        if found_partial:
+            passage, val, caveat = found_partial
+            return AuditFinding(
+                claim_id=claim.claim_id,
+                canonical_id=claim.canonical_id,
+                ad_claim_text=claim.text,
+                claim_materiality=claim.materiality,
+                status=ClaimStatus.PARTIALLY_SUPPORTED,
+                reason_code=ReasonCode.QUALIFIER_MISMATCH,
+                severity=Severity.MEDIUM,
+                confidence=Confidence.HIGH,
+                comparison=ComparisonRecord(
+                    claim_id=claim.claim_id,
+                    subject_match=True,
+                    predicate_match=True,
+                    qualifiers_conflict=True,
+                    evidence_passages=[passage]
+                ),
+                primary_evidence=passage,
+                explanation=f"Partially supported: advertised rate/price is corroborated, but landing page imposes material caveats: {caveat}.",
+                recommended_ad_fix="Disclose qualifications or billing conditions in ad copy.",
+                recommended_page_fix="Elevate qualification criteria to reduce customer drop-off."
+            )
+
+        if found_support:
+            return AuditFinding(
+                claim_id=claim.claim_id,
+                canonical_id=claim.canonical_id,
+                ad_claim_text=claim.text,
+                claim_materiality=claim.materiality,
+                status=ClaimStatus.SUPPORTED,
+                reason_code=ReasonCode.EXACT_MATCH,
+                severity=Severity.INFO,
+                confidence=Confidence.HIGH,
+                comparison=ComparisonRecord(
+                    claim_id=claim.claim_id,
+                    subject_match=True,
+                    predicate_match=True,
+                    numeric_match=True,
+                    evidence_passages=[found_support]
+                ),
+                primary_evidence=found_support,
+                explanation="Landing page fully corroborates the advertised pricing structure.",
+                recommended_ad_fix="No change required.",
+                recommended_page_fix="No change required."
+            )
+
+        return AuditFinding(
+            claim_id=claim.claim_id,
+            canonical_id=claim.canonical_id,
+            ad_claim_text=claim.text,
+            claim_materiality=claim.materiality,
+            status=ClaimStatus.MISSING,
+            reason_code=ReasonCode.CLAIM_NOT_FOUND,
+            severity=Severity.MEDIUM,
+            confidence=Confidence.HIGH,
+            comparison=ComparisonRecord(
+                claim_id=claim.claim_id,
+                subject_match=False,
+                predicate_match=False
+            ),
+            explanation="The advertised price point or financing term was not found on the landing page.",
+            recommended_ad_fix="Ensure price mentioned in ad is prominently displayed on the page.",
+            recommended_page_fix="Add clear pricing or financing terms to the landing page."
+        )
+
+    def _match_guarantee(self, claim: AtomicClaim, blocks: List[DOMBlock]) -> AuditFinding:
+        expected_days = claim.numeric.value if claim.numeric else None
+        
+        found_support = None
+        found_contradiction = None
+
+        for b in blocks:
+            text_lower = b.normalized_text.lower()
+            if "no refunds" in text_lower or "all sales final" in text_lower or "non-refundable" in text_lower:
+                verified, passage = self.verifier.verify_quote(b.raw_text, blocks)
+                if verified:
+                    found_contradiction = passage
+                    break
+            if "guarantee" in text_lower or "money-back" in text_lower or "risk-free" in text_lower:
+                verified, passage = self.verifier.verify_quote(b.raw_text, blocks)
+                if verified:
+                    found_support = passage
+
+        if found_contradiction:
+            return AuditFinding(
+                claim_id=claim.claim_id,
+                canonical_id=claim.canonical_id,
+                ad_claim_text=claim.text,
+                claim_materiality=claim.materiality,
+                status=ClaimStatus.CONTRADICTED,
+                reason_code=ReasonCode.POLARITY_CONTRADICTION,
+                severity=Severity.CRITICAL,
+                confidence=Confidence.HIGH,
+                comparison=ComparisonRecord(
+                    claim_id=claim.claim_id,
+                    subject_match=True,
+                    predicate_match=True,
+                    polarity_match=False,
+                    evidence_passages=[found_contradiction]
+                ),
+                primary_evidence=found_contradiction,
+                explanation="Ad promises a money-back or satisfaction guarantee, but landing page explicitly disclaims refunds ('All sales final' / 'Non-refundable').",
+                recommended_ad_fix="Remove guarantee claim from advertising copy immediately.",
+                recommended_page_fix="Align return policy with advertised satisfaction guarantee."
+            )
+
+        if found_support:
+            return AuditFinding(
+                claim_id=claim.claim_id,
+                canonical_id=claim.canonical_id,
+                ad_claim_text=claim.text,
+                claim_materiality=claim.materiality,
+                status=ClaimStatus.SUPPORTED,
+                reason_code=ReasonCode.EXACT_MATCH,
+                severity=Severity.INFO,
+                confidence=Confidence.HIGH,
+                comparison=ComparisonRecord(
+                    claim_id=claim.claim_id,
+                    subject_match=True,
+                    predicate_match=True,
+                    evidence_passages=[found_support]
+                ),
+                primary_evidence=found_support,
+                explanation="Landing page corroborates the advertised guarantee policy.",
+                recommended_ad_fix="No change required.",
+                recommended_page_fix="No change required."
+            )
+
+        return AuditFinding(
+            claim_id=claim.claim_id,
+            canonical_id=claim.canonical_id,
+            ad_claim_text=claim.text,
+            claim_materiality=claim.materiality,
+            status=ClaimStatus.MISSING,
+            reason_code=ReasonCode.CLAIM_NOT_FOUND,
+            severity=Severity.HIGH,
+            confidence=Confidence.HIGH,
+            comparison=ComparisonRecord(
+                claim_id=claim.claim_id,
+                subject_match=False,
+                predicate_match=False
+            ),
+            explanation="The advertised satisfaction guarantee was not mentioned on the landing page.",
+            recommended_ad_fix="Add guarantee terms to landing page or remove guarantee promise from ad.",
+            recommended_page_fix="Add prominent guarantee badge on the landing page."
+        )
+
+    def _match_capability(self, claim: AtomicClaim, blocks: List[DOMBlock]) -> AuditFinding:
+        tokens = [t.lower() for t in re.findall(r'\b[a-zA-Z]{4,}\b', claim.text)]
+        candidates = self.verifier.find_best_candidate_passages(tokens, blocks)
+
+        if candidates:
+            best_b = candidates[0]
+            verified, passage = self.verifier.verify_quote(best_b.raw_text, blocks)
+            if verified:
+                return AuditFinding(
+                    claim_id=claim.claim_id,
+                    canonical_id=claim.canonical_id,
+                    ad_claim_text=claim.text,
+                    claim_materiality=claim.materiality,
+                    status=ClaimStatus.SUPPORTED,
+                    reason_code=ReasonCode.SEMANTIC_EQUIVALENT,
+                    severity=Severity.INFO,
+                    confidence=Confidence.HIGH,
+                    comparison=ComparisonRecord(
+                        claim_id=claim.claim_id,
+                        subject_match=True,
+                        predicate_match=True,
+                        evidence_passages=[passage]
+                    ),
+                    primary_evidence=passage,
+                    explanation="Landing page corroborates the advertised capability.",
+                    recommended_ad_fix="No change required.",
+                    recommended_page_fix="No change required."
+                )
+
+        return AuditFinding(
+            claim_id=claim.claim_id,
+            canonical_id=claim.canonical_id,
+            ad_claim_text=claim.text,
+            claim_materiality=claim.materiality,
+            status=ClaimStatus.MISSING,
+            reason_code=ReasonCode.CLAIM_NOT_FOUND,
+            severity=Severity.MEDIUM,
+            confidence=Confidence.HIGH,
+            comparison=ComparisonRecord(
+                claim_id=claim.claim_id,
+                subject_match=False,
+                predicate_match=False
+            ),
+            explanation="The advertised product capability was not found in page content.",
+            recommended_ad_fix="Align ad copy with features actually highlighted on the page.",
+            recommended_page_fix="Add supporting technical specifications to the landing page."
+        )
+
+    def _match_condition(self, claim: AtomicClaim, blocks: List[DOMBlock]) -> AuditFinding:
+        tokens = [t.lower() for t in re.findall(r'\b[a-zA-Z]{4,}\b', claim.text)]
+        candidates = self.verifier.find_best_candidate_passages(tokens, blocks)
+
+        if candidates:
+            best_b = candidates[0]
+            verified, passage = self.verifier.verify_quote(best_b.raw_text, blocks)
+            if verified:
+                status = ClaimStatus.SUPPORTED
+                explanation = "Landing page mentions this qualification or eligibility statement."
+                if passage.dom_zone == DOMZone.FOOTER_DISCLAIMER:
+                    status = ClaimStatus.PARTIALLY_SUPPORTED
+                    explanation = "Partially supported: eligibility condition is mentioned, but only in the footer fine print."
+                return AuditFinding(
+                    claim_id=claim.claim_id,
+                    canonical_id=claim.canonical_id,
+                    ad_claim_text=claim.text,
+                    claim_materiality=claim.materiality,
+                    status=status,
+                    reason_code=ReasonCode.EXACT_MATCH if status == ClaimStatus.SUPPORTED else ReasonCode.BURIED_DISCLAIMER,
+                    severity=Severity.INFO if status == ClaimStatus.SUPPORTED else Severity.LOW,
+                    confidence=Confidence.HIGH,
+                    comparison=ComparisonRecord(
+                        claim_id=claim.claim_id,
+                        subject_match=True,
+                        predicate_match=True,
+                        evidence_passages=[passage]
+                    ),
+                    primary_evidence=passage,
+                    explanation=explanation,
+                    recommended_ad_fix="No change required.",
+                    recommended_page_fix="No change required."
+                )
+
+        return AuditFinding(
+            claim_id=claim.claim_id,
+            canonical_id=claim.canonical_id,
+            ad_claim_text=claim.text,
+            claim_materiality=claim.materiality,
+            status=ClaimStatus.MISSING,
+            reason_code=ReasonCode.CLAIM_NOT_FOUND,
+            severity=Severity.LOW,
+            confidence=Confidence.HIGH,
+            comparison=ComparisonRecord(
+                claim_id=claim.claim_id,
+                subject_match=False,
+                predicate_match=False
+            ),
+            explanation="Eligibility condition was not explicitly corroborated on the landing page.",
+            recommended_ad_fix="Clarify eligibility requirements in ad copy if relevant.",
+            recommended_page_fix="Explicitly document eligibility requirements on landing page."
         )

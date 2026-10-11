@@ -15,8 +15,8 @@ class Scorer:
     SUPPORT_VALUES = {
         ClaimStatus.SUPPORTED: 1.0,
         ClaimStatus.PARTIALLY_SUPPORTED: 0.50,
-        ClaimStatus.NOT_FOUND: 0.25,
-        ClaimStatus.AMBIGUOUS: 0.20,
+        ClaimStatus.MISSING: 0.25,
+        ClaimStatus.UNVERIFIABLE: 0.20,
         ClaimStatus.CONTRADICTED: 0.0
     }
 
