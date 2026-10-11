@@ -291,16 +291,31 @@
           <div class="space-y-5">
             <div class="flex items-center justify-between">
               <span class="measure-tag">SOURCE B · LANDING PAGE</span>
-              <div class="flex items-center space-x-2">
+              <div class="flex items-center space-x-3 text-xs font-mono">
+                <button type="button" id="tab-btn-url" onclick="switchLandingInputTab('url')" class="font-bold text-[var(--accent)] underline cursor-pointer">Live URL</button>
+                <span class="text-[var(--ink-muted)]">|</span>
+                <button type="button" id="tab-btn-html" onclick="switchLandingInputTab('html')" class="text-[var(--ink-secondary)] hover:text-[var(--ink)] cursor-pointer">Raw HTML</button>
                 <input type="file" id="file-upload" onchange="handleFileUpload(event)" accept=".html,.htm" class="hidden">
-                <button onclick="document.getElementById('file-upload').click()" class="text-xs font-mono text-[var(--accent)] hover:underline flex items-center space-x-1">
+                <button onclick="document.getElementById('file-upload').click()" class="text-[var(--accent)] hover:underline flex items-center space-x-1 pl-2">
                   <i data-lucide="upload" class="w-3.5 h-3.5"></i>
-                  <span>Upload HTML</span>
+                  <span>Upload</span>
                 </button>
               </div>
             </div>
 
-            <div>
+            <div id="landing-url-container" class="space-y-2">
+              <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)]">Destination Landing Page URL</label>
+              <div class="flex gap-2">
+                <input type="text" id="input-url" placeholder="https://example.com/landing-page" value="https://example.com" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl px-4 py-3 text-sm font-mono text-[var(--ink)] focus:outline-none focus:border-[var(--accent)] transition">
+                <button type="button" id="btn-fetch-url" onclick="fetchLiveURL()" class="btn-metic-secondary !text-xs !py-2 shrink-0 flex items-center space-x-1.5">
+                  <i data-lucide="globe" class="w-3.5 h-3.5"></i>
+                  <span>Fetch</span>
+                </button>
+              </div>
+              <div id="fetch-status" class="text-[11px] font-mono text-[var(--ink-muted)]">Live HTTP Fetcher with SSRF guardrails and browser-grade headers active.</div>
+            </div>
+
+            <div id="landing-html-container" class="hidden">
               <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)] mb-1.5">Landing Page Snapshot (HTML)</label>
               <textarea id="input-html" rows="7" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl p-4 text-xs font-mono text-[var(--ink)] focus:outline-none focus:border-[var(--accent)] transition leading-relaxed"><html><body><h1>Start your free 7-day trial</h1><p>Enter your payment details to continue.</p></body></html></textarea>
             </div>

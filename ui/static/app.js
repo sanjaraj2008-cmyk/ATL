@@ -572,6 +572,67 @@ async function loadPresetsDropdown() {
   }
 }
 
+let activeLandingTab = 'url';
+
+function switchLandingInputTab(tab) {
+  activeLandingTab = tab;
+  const urlContainer = document.getElementById('landing-url-container');
+  const htmlContainer = document.getElementById('landing-html-container');
+  const tabBtnUrl = document.getElementById('tab-btn-url');
+  const tabBtnHtml = document.getElementById('tab-btn-html');
+
+  if (tab === 'url') {
+    urlContainer.classList.remove('hidden');
+    htmlContainer.classList.add('hidden');
+    tabBtnUrl.className = "font-bold text-[var(--accent)] underline cursor-pointer";
+    tabBtnHtml.className = "text-[var(--ink-secondary)] hover:text-[var(--ink)] cursor-pointer";
+  } else {
+    urlContainer.classList.add('hidden');
+    htmlContainer.classList.remove('hidden');
+    tabBtnUrl.className = "text-[var(--ink-secondary)] hover:text-[var(--ink)] cursor-pointer";
+    tabBtnHtml.className = "font-bold text-[var(--accent)] underline cursor-pointer";
+  }
+}
+
+async function fetchLiveURL() {
+  const urlInput = document.getElementById('input-url');
+  const statusEl = document.getElementById('fetch-status');
+  const fetchBtn = document.getElementById('btn-fetch-url');
+  const rawUrl = urlInput.value.trim();
+
+  if (!rawUrl) {
+    statusEl.innerHTML = '<span class="text-rose-500 font-bold">Please enter a valid URL.</span>';
+    return;
+  }
+
+  fetchBtn.disabled = true;
+  statusEl.innerHTML = '<span class="text-[var(--accent)] animate-pulse">Fetching live landing page HTML...</span>';
+
+  try {
+    const res = await fetch('/api/fetch-url', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: rawUrl })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.detail || 'Failed to fetch URL');
+    }
+
+    document.getElementById('input-html').value = data.html;
+    const meta = data.metadata || {};
+    statusEl.innerHTML = `
+      <span class="text-emerald-600 dark:text-emerald-400 font-bold">✓ Fetched successfully!</span>
+      <span class="text-[var(--ink-muted)]">Status: ${meta.status_code || 200} | ${meta.load_time_ms || 0}ms | ${Math.round(data.html.length / 1024)} KB</span>
+    `;
+  } catch (err) {
+    statusEl.innerHTML = `<span class="text-rose-600 dark:text-rose-400 font-bold">Error: ${err.message}</span>`;
+  } finally {
+    fetchBtn.disabled = false;
+  }
+}
+
 function loadPreset(idx) {
   if (idx === "") return;
   const item = presetsList[idx];
@@ -579,6 +640,9 @@ function loadPreset(idx) {
     document.getElementById('input-headline').value = item.ad_headline;
     document.getElementById('input-desc').value = item.ad_description;
     document.getElementById('input-html').value = item.html;
+    if (item.html) {
+      switchLandingInputTab('html');
+    }
   }
 }
 
@@ -596,6 +660,7 @@ function handleFileUpload(event) {
     const reader = new FileReader();
     reader.onload = (e) => {
       document.getElementById('input-html').value = e.target.result;
+      switchLandingInputTab('html');
     };
     reader.readAsText(file);
   }
@@ -613,19 +678,33 @@ async function executeAudit() {
     <span class="font-mono text-xs">AUDITING DOM...</span>
   `;
 
+  const auditPayload = {
+    ad_headline: headline,
+    ad_description: desc
+  };
+
+  if (activeLandingTab === 'url') {
+    const liveUrl = document.getElementById('input-url').value.trim();
+    if (html && html.trim().length > 100) {
+      auditPayload.landing_page_html = html;
+      auditPayload.landing_page_url = liveUrl;
+    } else {
+      auditPayload.landing_page_url = liveUrl;
+    }
+  } else {
+    auditPayload.landing_page_html = html;
+  }
+
   try {
     const resp = await fetch('/api/audit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        ad_headline: headline,
-        ad_description: desc,
-        landing_page_html: html
-      })
+      body: JSON.stringify(auditPayload)
     });
 
     if (!resp.ok) {
-      throw new Error(`Server returned status ${resp.status}`);
+      const errData = await resp.json().catch(() => ({}));
+      throw new Error(errData.detail || `Server returned status ${resp.status}`);
     }
 
     const data = await resp.json();

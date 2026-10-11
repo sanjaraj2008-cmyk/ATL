@@ -11,16 +11,18 @@ from core.verifier import EvidenceVerifier
 from core.explainer import MismatchExplainer
 from core.severity import SeverityAssessor
 from core.scorer import Scorer
+from core.fetcher import URLFetcher
 
 class AuditEngine:
     """
     Main Orchestrator for the Ad-to-Landing-Page Message Match Auditor.
-    Connects Extractor, Decomposer, Matcher, Verifier, Explainer, SeverityAssessor, and Scorer into an atomic pipeline.
+    Connects URLFetcher, Extractor, Decomposer, Matcher, Verifier, Explainer, SeverityAssessor, and Scorer.
     """
 
     VERSION = "1.0.0"
 
-    def __init__(self):
+    def __init__(self, allow_local_fetch: bool = False):
+        self.fetcher = URLFetcher(allow_local=allow_local_fetch)
         self.extractor = ContentExtractor()
         self.decomposer = ClaimsDecomposer()
         self.matcher = ClaimMatcher()
@@ -162,3 +164,46 @@ class AuditEngine:
                 "mode": "deterministic_offline"
             }
         )
+
+    def audit_url(
+        self,
+        ad_headline: str,
+        ad_description: str,
+        landing_page_url: str,
+        ad_call_to_action: Optional[str] = None
+    ) -> AuditResult:
+        """
+        Fetches the live destination landing page HTML via URLFetcher
+        and executes the full 7-phase audit engine.
+        """
+        html_content, fetch_err, metadata = self.fetcher.fetch_html(landing_page_url)
+        if fetch_err or not html_content:
+            err_msg = f"Failed to fetch landing page URL '{landing_page_url}': {fetch_err or 'Empty response'}"
+            return AuditResult(
+                audit_state=AuditState.FAILED_UNREADABLE_INPUT,
+                grade="Unable to Assess",
+                scoring_unavailability_reason=err_msg,
+                audit_warnings=[err_msg],
+                retrieval_limitations=[err_msg],
+                audit_metadata={"url_metadata": metadata}
+            )
+
+        result = self.audit(
+            ad_headline=ad_headline,
+            ad_description=ad_description,
+            landing_page_html=html_content,
+            ad_call_to_action=ad_call_to_action,
+            snapshot_id=metadata.get("content_hash")
+        )
+
+        # Bind URL metadata to audit result
+        result.audit_metadata["source_url"] = landing_page_url
+        result.audit_metadata["final_url"] = metadata.get("final_url")
+        result.audit_metadata["http_status"] = metadata.get("status_code")
+        result.audit_metadata["load_time_ms"] = metadata.get("load_time_ms")
+        if metadata.get("warnings"):
+            result.audit_warnings.extend(metadata["warnings"])
+            result.retrieval_limitations.extend(metadata["warnings"])
+            result.audit_state = AuditState.PARTIAL_CONTENT_WARNING
+
+        return result

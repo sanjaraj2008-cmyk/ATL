@@ -24,18 +24,41 @@ engine = AuditEngine()
 class AuditRequest(BaseModel):
     ad_headline: str
     ad_description: str
-    landing_page_html: str
+    landing_page_html: Optional[str] = None
+    landing_page_url: Optional[str] = None
     ad_call_to_action: Optional[str] = None
+
+class FetchURLRequest(BaseModel):
+    url: str
+
+@app.post("/api/fetch-url")
+def fetch_url(req: FetchURLRequest):
+    html_content, err, metadata = engine.fetcher.fetch_html(req.url)
+    if err:
+        raise HTTPException(status_code=400, detail=err)
+    return {
+        "url": req.url,
+        "html": html_content,
+        "metadata": metadata
+    }
 
 @app.post("/api/audit")
 def run_audit(req: AuditRequest):
     try:
-        result = engine.audit(
-            ad_headline=req.ad_headline,
-            ad_description=req.ad_description,
-            landing_page_html=req.landing_page_html,
-            ad_call_to_action=req.ad_call_to_action
-        )
+        if req.landing_page_url and not req.landing_page_html:
+            result = engine.audit_url(
+                ad_headline=req.ad_headline,
+                ad_description=req.ad_description,
+                landing_page_url=req.landing_page_url,
+                ad_call_to_action=req.ad_call_to_action
+            )
+        else:
+            result = engine.audit(
+                ad_headline=req.ad_headline,
+                ad_description=req.ad_description,
+                landing_page_html=req.landing_page_html or "",
+                ad_call_to_action=req.ad_call_to_action
+            )
         return result.to_dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
