@@ -91,20 +91,78 @@ class MismatchExplainer:
             certainty_level=certainty
         )
 
-        # Synthesize cohesive 6-part standardized explanation into finding.explanation
-        finding.explanation = (
-            f"Ad Promise: {original_ad_claim}. "
-            f"Page Evidence: {lp_finding} "
-            f"Discrepancy: {discrepancy} "
-            f"Significance: {significance} "
-            f"Conditions/Visibility: {conditions_visibility} "
-            f"Verification Certainty: {certainty}"
-        )
+        plain_summary = self._generate_plain_english_summary(finding, claim)
+        finding.plain_summary = plain_summary
+        finding.explanation = plain_summary
         finding.recommended_ad_fix = ad_fix
         finding.recommended_page_fix = page_fix
         finding.mismatch_details = mismatch
 
         return mismatch
+
+    def _generate_plain_english_summary(self, finding: AuditFinding, claim: AtomicClaim) -> str:
+        """
+        Creates a friendly, simple 1-2 sentence explanation that anyone (including a 5th grader)
+        can immediately understand without reading confusing technical jargon.
+        """
+        status = finding.status
+        reason = finding.reason_code
+        ev = finding.primary_evidence
+
+        if status == ClaimStatus.SUPPORTED:
+            if ev and ev.dom_zone == DOMZone.FOOTER_DISCLAIMER:
+                return (
+                    f"The website mentions \"{claim.text}\", but it hides it in tiny print at the bottom "
+                    f"of the page instead of showing it clearly upfront."
+                )
+            return (
+                f"Great match! The website clearly delivers on the promise (\"{claim.text}\") "
+                f"that was made in the ad."
+            )
+
+        if status == ClaimStatus.CONTRADICTED:
+            if ev:
+                clean_quote = ev.quote.strip()
+                if len(clean_quote) > 90:
+                    clean_quote = clean_quote[:87] + "..."
+                return (
+                    f"The ad says \"{claim.text}\", but the website actually says: \"{clean_quote}\". "
+                    f"Visitors will be upset because they won't get what the ad promised."
+                )
+            return (
+                f"The ad promises \"{claim.text}\", but the website directly contradicts it. "
+                f"Visitors will be confused and lose trust."
+            )
+
+        if status == ClaimStatus.PARTIALLY_SUPPORTED:
+            if ev and "up to" in ev.quote.lower():
+                return (
+                    f"The ad promises an unconditional \"{claim.text}\", but the website actually says "
+                    f"\"up to\", meaning not everyone gets the full amount."
+                )
+            if reason == ReasonCode.BURIED_DISCLAIMER:
+                return (
+                    f"The ad promises \"{claim.text}\", but the website buries important rules or fine print "
+                    f"in the footer at the bottom of the page."
+                )
+            return (
+                f"The website offers something similar to \"{claim.text}\", but adds extra restrictions "
+                f"or hidden conditions that were not mentioned in the ad."
+            )
+
+        if status in (ClaimStatus.MISSING, ClaimStatus.NOT_FOUND):
+            return (
+                f"The ad promises \"{claim.text}\", but we searched the entire website and could not find "
+                f"any mention of it. Visitors looking for this will be confused or leave."
+            )
+
+        if status == ClaimStatus.UNVERIFIABLE:
+            return (
+                f"We could not confirm \"{claim.text}\" because the website content was incomplete "
+                f"or could not be clearly verified."
+            )
+
+        return f"The ad and the website do not match on \"{claim.text}\"."
 
     def _format_zone(self, zone: DOMZone) -> str:
         if zone == DOMZone.HERO_CANDIDATE:

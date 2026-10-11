@@ -3,7 +3,8 @@ from decimal import Decimal
 from typing import List, Optional, Tuple
 from core.schemas import (
     AtomicClaim, DOMBlock, ComparisonRecord, AuditFinding, ClaimStatus,
-    ReasonCode, Severity, Confidence, DOMZone, ClaimType, Comparator, Polarity, EvidencePassage
+    ReasonCode, Severity, Confidence, DOMZone, ClaimType, Comparator, Polarity,
+    EvidencePassage, RelevanceStatus
 )
 from core.verifier import EvidenceVerifier
 
@@ -429,14 +430,17 @@ class ClaimMatcher:
         )
 
     def _match_general_claim(self, claim: AtomicClaim, blocks: List[DOMBlock]) -> AuditFinding:
-        # Keyword token overlap matching
-        tokens = [t.lower() for t in re.findall(r'\b[a-zA-Z]{4,}\b', claim.text)]
+        # Keyword token overlap matching with substantive candidate filtering
+        tokens = [t.lower() for t in re.findall(r'\b[a-zA-Z]{3,}\b', claim.text)]
         candidates = self.verifier.find_best_candidate_passages(tokens, blocks)
 
-        if candidates:
-            best_block = candidates[0]
+        for best_block in candidates:
             verified, passage = self.verifier.verify_quote(best_block.raw_text, blocks)
-            if verified:
+            if verified and passage:
+                rel_status, _ = self.verifier.verify_relevance(claim.text, ClaimStatus.SUPPORTED, passage)
+                if rel_status != RelevanceStatus.RELEVANT:
+                    continue
+
                 # Check if buried in footer
                 if passage.dom_zone == DOMZone.FOOTER_DISCLAIMER:
                     return AuditFinding(
@@ -713,13 +717,16 @@ class ClaimMatcher:
         )
 
     def _match_capability(self, claim: AtomicClaim, blocks: List[DOMBlock]) -> AuditFinding:
-        tokens = [t.lower() for t in re.findall(r'\b[a-zA-Z]{4,}\b', claim.text)]
+        tokens = [t.lower() for t in re.findall(r'\b[a-zA-Z]{3,}\b', claim.text)]
         candidates = self.verifier.find_best_candidate_passages(tokens, blocks)
 
-        if candidates:
-            best_b = candidates[0]
+        for best_b in candidates:
             verified, passage = self.verifier.verify_quote(best_b.raw_text, blocks)
-            if verified:
+            if verified and passage:
+                rel_status, _ = self.verifier.verify_relevance(claim.text, ClaimStatus.SUPPORTED, passage)
+                if rel_status != RelevanceStatus.RELEVANT:
+                    continue
+
                 return AuditFinding(
                     claim_id=claim.claim_id,
                     canonical_id=claim.canonical_id,
@@ -761,13 +768,16 @@ class ClaimMatcher:
         )
 
     def _match_condition(self, claim: AtomicClaim, blocks: List[DOMBlock]) -> AuditFinding:
-        tokens = [t.lower() for t in re.findall(r'\b[a-zA-Z]{4,}\b', claim.text)]
+        tokens = [t.lower() for t in re.findall(r'\b[a-zA-Z]{3,}\b', claim.text)]
         candidates = self.verifier.find_best_candidate_passages(tokens, blocks)
 
-        if candidates:
-            best_b = candidates[0]
+        for best_b in candidates:
             verified, passage = self.verifier.verify_quote(best_b.raw_text, blocks)
-            if verified:
+            if verified and passage:
+                rel_status, _ = self.verifier.verify_relevance(claim.text, ClaimStatus.SUPPORTED, passage)
+                if rel_status != RelevanceStatus.RELEVANT:
+                    continue
+
                 status = ClaimStatus.SUPPORTED
                 explanation = "Landing page mentions this qualification or eligibility statement."
                 if passage.dom_zone == DOMZone.FOOTER_DISCLAIMER:

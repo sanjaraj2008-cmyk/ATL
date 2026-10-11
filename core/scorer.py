@@ -15,8 +15,9 @@ class Scorer:
     SUPPORT_VALUES = {
         ClaimStatus.SUPPORTED: 1.0,
         ClaimStatus.PARTIALLY_SUPPORTED: 0.50,
-        ClaimStatus.MISSING: 0.25,
-        ClaimStatus.UNVERIFIABLE: 0.20,
+        ClaimStatus.MISSING: 0.0,
+        ClaimStatus.NOT_FOUND: 0.0,
+        ClaimStatus.UNVERIFIABLE: 0.0,
         ClaimStatus.CONTRADICTED: 0.0
     }
 
@@ -57,7 +58,7 @@ class Scorer:
 
         for f in assessed:
             w = self.MATERIALITY_WEIGHTS.get(f.claim_materiality, 1.0)
-            s = self.SUPPORT_VALUES.get(f.status, 0.25)
+            s = self.SUPPORT_VALUES.get(f.status, 0.0)
 
             # Heuristic location discount if supported only in footer
             if f.status == ClaimStatus.SUPPORTED and f.reason_code == ReasonCode.BURIED_DISCLAIMER:
@@ -77,7 +78,7 @@ class Scorer:
         covered_weight = sum(
             self.MATERIALITY_WEIGHTS.get(f.claim_materiality, 1.0)
             for f in assessed
-            if f.status != ClaimStatus.NOT_FOUND
+            if f.status in (ClaimStatus.SUPPORTED, ClaimStatus.PARTIALLY_SUPPORTED)
         )
         coverage_index = int(round(100.0 * (covered_weight / total_weight))) if total_weight > 0 else 0
 

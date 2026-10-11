@@ -811,6 +811,29 @@ function renderAuditResults(data) {
       `;
     }
 
+    let techDrawerHtml = '';
+    if (f.mismatch_details) {
+      techDrawerHtml = `
+        <details class="mt-3.5 text-xs text-[var(--ink-secondary)] rounded-xl border border-[var(--line-border)] bg-[var(--paper)] overflow-hidden">
+          <summary class="px-3.5 py-2.5 font-mono font-semibold text-[var(--ink)] cursor-pointer select-none hover:bg-[var(--paper-subtle)] flex items-center justify-between">
+            <span class="flex items-center gap-1.5">
+              <i data-lucide="layers" class="w-3.5 h-3.5 text-[var(--accent)]"></i>
+              <span>🔬 Detailed Technical Audit Breakdown (Phase 5 Schema)</span>
+            </span>
+            <span class="text-[10px] text-[var(--ink-muted)]">Click to expand</span>
+          </summary>
+          <div class="p-4 border-t border-[var(--line-border)] space-y-2 font-mono text-[11px] leading-relaxed">
+            <div><b class="text-[var(--ink)]">Ad Promise:</b> ${f.mismatch_details.original_ad_claim}</div>
+            <div><b class="text-[var(--ink)]">Page Finding:</b> ${f.mismatch_details.landing_page_finding}</div>
+            <div><b class="text-[var(--ink)]">Discrepancy:</b> ${f.mismatch_details.discrepancy_description}</div>
+            <div><b class="text-[var(--ink)]">Significance:</b> ${f.mismatch_details.practical_significance}</div>
+            <div><b class="text-[var(--ink)]">Conditions & Visibility:</b> ${f.mismatch_details.conditions_and_visibility}</div>
+            <div><b class="text-[var(--ink)]">Audit Certainty:</b> ${f.mismatch_details.certainty_level}</div>
+          </div>
+        </details>
+      `;
+    }
+
     card.innerHTML = `
       <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
@@ -819,7 +842,14 @@ function renderAuditResults(data) {
             <span class="text-[11px] font-mono text-[var(--ink-muted)]">CLAIM ${f.claim_id}</span>
           </div>
           <h4 class="editorial-title text-2xl text-[var(--ink)] mt-2">${f.ad_claim_text}</h4>
-          <p class="text-xs text-[var(--ink-secondary)] mt-1.5 leading-relaxed font-sans">${f.explanation}</p>
+          
+          <div class="mt-3 p-3.5 rounded-xl bg-[var(--paper-subtle)] border border-[var(--line-border)] flex items-start gap-2.5">
+            <span class="text-base select-none">💡</span>
+            <div>
+              <div class="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--accent)] mb-0.5">Plain-English Explanation</div>
+              <p class="text-sm text-[var(--ink)] font-normal leading-relaxed">${f.plain_summary || f.explanation}</p>
+            </div>
+          </div>
         </div>
 
         <div class="text-left md:text-right text-xs font-mono text-[var(--ink-muted)] shrink-0 space-y-0.5">
@@ -831,6 +861,7 @@ function renderAuditResults(data) {
 
       ${regulatoryHtml}
       ${evidenceHtml}
+      ${techDrawerHtml}
 
       <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 pt-4 precision-border-t text-xs">
         <div class="p-4 rounded-xl bg-[var(--paper)] border border-[var(--line-border)]">

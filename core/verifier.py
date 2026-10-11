@@ -18,6 +18,19 @@ class EvidenceVerifier:
     6. Citation verification record logging.
     """
 
+    GENERIC_STOP_WORDS = {
+        "start", "started", "starting", "using", "uses", "used", "today", "with",
+        "your", "yours", "our", "ours", "their", "theirs", "his", "her", "hers", "its",
+        "my", "mine", "you", "they", "them", "this", "that", "these", "those", "make",
+        "makes", "making", "online", "click", "here", "learn", "more", "best", "great",
+        "simple", "easy", "fast", "quick", "need", "needs", "help", "from", "into", "over",
+        "such", "free", "trial", "plan", "join", "sign", "signup", "register", "come",
+        "look", "about", "have", "more", "most", "take", "takes", "some", "every", "page",
+        "menu", "home", "back", "next", "view", "read", "open", "close", "find", "good",
+        "well", "just", "also", "very", "then", "what", "when", "where", "which", "will",
+        "would", "could", "should", "tell", "give", "gives", "getting", "gets"
+    }
+
     SYNONYM_MAP = {
         "loan": ["loan", "funding", "financing", "credit", "borrow", "capital"],
         "funding": ["funding", "loan", "financing", "credit", "capital"],
@@ -32,7 +45,12 @@ class EvidenceVerifier:
         "shipping": ["shipping", "delivery", "dispatch", "ship"],
         "guarantee": ["guarantee", "guaranteed", "warranty", "money-back", "satisfaction"],
         "collateral": ["collateral", "security", "secured"],
-        "support": ["support", "service", "help", "assistance"]
+        "support": ["support", "service", "help", "assistance"],
+        "software": ["software", "platform", "app", "application", "tool", "system"],
+        "management": ["management", "manage", "organize", "tracker", "tracking", "coordination"],
+        "apply": ["apply", "application", "applying", "applied"],
+        "minute": ["minute", "minutes", "min", "mins"],
+        "profile": ["profile", "profiles", "type", "types", "tier", "tiers"]
     }
 
     def verify_quote(
@@ -173,18 +191,25 @@ class EvidenceVerifier:
         quote_lower = passage.quote.lower()
         claim_lower = claim_text.lower()
 
-        # Extract content words (> 3 characters)
-        claim_words = [w for w in re.findall(r'\b[a-zA-Z]{4,}\b', claim_lower)]
+        # Extract content words (> 3 characters) excluding generic stop words
+        claim_words = [w for w in re.findall(r'\b[a-zA-Z]{3,}\b', claim_lower) if w not in self.GENERIC_STOP_WORDS]
+        if not claim_words:
+            claim_words = [w for w in re.findall(r'\b[a-zA-Z]{4,}\b', claim_lower)]
         numbers_in_claim = re.findall(r'\d+(?:\.\d+)?', claim_lower)
 
-        # Check for overlapping keywords or synonyms
-        expanded_keywords = set(claim_words)
+        # Build expansions for each substantive keyword
+        kw_expansions = []
         for w in claim_words:
+            exp = {w}
             for root, syns in self.SYNONYM_MAP.items():
                 if root in w or w in root:
-                    expanded_keywords.update(syns)
+                    exp.update(syns)
+            kw_expansions.append(exp)
 
-        has_keyword_match = any(kw in quote_lower for kw in expanded_keywords)
+        # Check how many distinct substantive keywords appear in the quote
+        matched_kw_count = sum(1 for exp in kw_expansions if any(re.search(r'\b' + re.escape(syn) + r'\b', quote_lower) for syn in exp))
+        min_kws_needed = 1 if len(claim_words) == 1 else min(2, len(claim_words))
+        has_keyword_match = matched_kw_count >= min_kws_needed
         has_number_match = any(num in quote_lower for num in numbers_in_claim)
 
         # Contradiction indicators (e.g. "no refunds", "non-refundable", different numbers, payment required)
@@ -203,7 +228,7 @@ class EvidenceVerifier:
         if finding_status in (ClaimStatus.SUPPORTED, ClaimStatus.PARTIALLY_SUPPORTED):
             if has_keyword_match or has_number_match:
                 return RelevanceStatus.RELEVANT, None
-            return RelevanceStatus.IRRELEVANT, "Quotation does not contain terms or numbers relevant to the advertised claim."
+            return RelevanceStatus.IRRELEVANT, "Quotation does not contain sufficient substantive terms or numbers relevant to the advertised claim."
 
         return RelevanceStatus.RELEVANT, None
 
@@ -321,20 +346,42 @@ class EvidenceVerifier:
         return records
 
     def find_best_candidate_passages(self, claim_keywords: List[str], blocks: List[DOMBlock]) -> List[DOMBlock]:
-        """Retrieve candidate blocks that mention keywords or synonyms for a claim."""
-        expanded_keywords = set()
-        for kw in claim_keywords:
-            kw_low = kw.lower()
-            expanded_keywords.add(kw_low)
+        """Retrieve candidate blocks that mention keywords or synonyms for a claim with substantive threshold."""
+        # 1. Filter out generic stop words
+        substantive_kws = [k.lower() for k in claim_keywords if k.lower() not in self.GENERIC_STOP_WORDS and len(k) >= 3]
+        if not substantive_kws:
+            substantive_kws = [k.lower() for k in claim_keywords if len(k) >= 3]
+
+        if not substantive_kws:
+            return []
+
+        # Determine threshold
+        if len(substantive_kws) == 1:
+            min_hits = 1
+        elif len(substantive_kws) == 2:
+            min_hits = 2
+        else:
+            min_hits = max(2, int(len(substantive_kws) * 0.5))
+
+        # Map each substantive keyword to its synonym expansion
+        kw_expansions = []
+        for kw in substantive_kws:
+            exp = {kw}
             for root, syns in self.SYNONYM_MAP.items():
-                if root in kw_low or kw_low in root:
-                    expanded_keywords.update(syns)
+                if root in kw or kw in root:
+                    exp.update(syns)
+            kw_expansions.append(exp)
 
         matched = []
         for block in blocks:
             text_lower = block.normalized_text.lower()
-            hit_count = sum(1 for kw in expanded_keywords if kw in text_lower)
-            if hit_count > 0:
+            # Count how many distinct substantive keywords matched this block
+            hit_count = 0
+            for exp in kw_expansions:
+                if any(re.search(r'\b' + re.escape(syn) + r'\b', text_lower) for syn in exp):
+                    hit_count += 1
+
+            if hit_count >= min_hits:
                 score = hit_count * (1.0 + block.prominence_weight * 0.5)
                 matched.append((score, block.order_index, block))
 

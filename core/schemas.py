@@ -218,6 +218,7 @@ class AuditFinding(BaseModel):
     recommended_ad_fix: str
     recommended_page_fix: str
     mismatch_details: Optional[MismatchExplanation] = None
+    plain_summary: Optional[str] = None
     severity_assessment: Optional[SeverityAssessment] = None
     regulatory_flag: bool = False
     regulatory_review_note: Optional[str] = None
@@ -289,6 +290,7 @@ class AuditResult(BaseModel):
                     "start_offset": f.primary_evidence.source_start_offset if f.primary_evidence else None,
                     "end_offset": f.primary_evidence.source_end_offset if f.primary_evidence else None
                 } if f.primary_evidence else None,
+                "plain_summary": f.plain_summary or f.explanation,
                 "explanation": f.explanation,
                 "mismatch_details": f.mismatch_details.model_dump() if f.mismatch_details else None,
                 "recommended_ad_fix": f.recommended_ad_fix,
