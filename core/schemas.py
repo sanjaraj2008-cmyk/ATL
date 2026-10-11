@@ -50,10 +50,15 @@ class DOMZone(str, Enum):
 class ClaimType(str, Enum):
     TRIAL_DURATION = "TRIAL_DURATION"
     PRICING_DISCOUNT = "PRICING_DISCOUNT"
+    PRICE_POINT = "PRICE_POINT"
     APPROVAL_TIMELINE = "APPROVAL_TIMELINE"
     REQUIREMENT_FRICTION = "REQUIREMENT_FRICTION"
-    VALUE_PROPOSITION = "VALUE_PROPOSITION"
+    GUARANTEE = "GUARANTEE"
+    PRODUCT_CAPABILITY = "PRODUCT_CAPABILITY"
+    AVAILABILITY_CONDITION = "AVAILABILITY_CONDITION"
+    SUBJECTIVE_MARKETING = "SUBJECTIVE_MARKETING"
     CALL_TO_ACTION = "CALL_TO_ACTION"
+    VALUE_PROPOSITION = "VALUE_PROPOSITION"
     OTHER = "OTHER"
 
 class Comparator(str, Enum):
@@ -92,7 +97,9 @@ class AtomicClaim(BaseModel):
     qualifiers: List[str] = Field(default_factory=list)
     polarity: Polarity = Polarity.POSITIVE
     materiality: Materiality = Materiality.HIGH
-    source: str # "ad_headline" or "ad_description"
+    source: str # "ad_headline", "ad_description", or "ad_call_to_action"
+    is_factual: bool = True # False for subjective marketing puffery or pure call to action
+    source_span: Optional[str] = None # Verbatim substring or clause from ad source
 
 class DOMBlock(BaseModel):
     block_id: str

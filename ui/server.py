@@ -21,11 +21,17 @@ class AuditRequest(BaseModel):
     ad_headline: str
     ad_description: str
     landing_page_html: str
+    ad_call_to_action: Optional[str] = None
 
 @app.post("/api/audit", response_model=AuditResult)
 def run_audit(req: AuditRequest):
     try:
-        result = engine.audit(req.ad_headline, req.ad_description, req.landing_page_html)
+        result = engine.audit(
+            ad_headline=req.ad_headline,
+            ad_description=req.ad_description,
+            landing_page_html=req.landing_page_html,
+            ad_call_to_action=req.ad_call_to_action
+        )
         return result
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -21,15 +21,21 @@ class AuditEngine:
         self.matcher = ClaimMatcher()
         self.scorer = Scorer()
 
-    def audit(self, ad_headline: str, ad_description: str, landing_page_html: str) -> AuditResult:
+    def audit(
+        self,
+        ad_headline: str,
+        ad_description: str,
+        landing_page_html: str,
+        ad_call_to_action: Optional[str] = None
+    ) -> AuditResult:
         warnings: List[str] = []
 
         # 1. Validation checks
-        if not (ad_headline or ad_description):
+        if not (ad_headline or ad_description or ad_call_to_action):
             return AuditResult(
                 audit_state=AuditState.FAILED_UNREADABLE_INPUT,
                 grade="Unable to Assess",
-                audit_warnings=["Ad headline and description are both empty."]
+                audit_warnings=["Ad headline, description, and call to action are all empty."]
             )
 
         if not landing_page_html or not landing_page_html.strip():
@@ -50,8 +56,8 @@ class AuditEngine:
                 audit_warnings=warnings or ["No text content could be extracted from the landing page."]
             )
 
-        # 3. Decompose ad copy into claims
-        atomic_claims = self.decomposer.decompose(ad_headline, ad_description)
+        # 3. Decompose ad copy into claims (Phase 1)
+        atomic_claims = self.decomposer.decompose(ad_headline, ad_description, ad_call_to_action)
         if not atomic_claims:
             return AuditResult(
                 audit_state=AuditState.FAILED_UNREADABLE_INPUT,
