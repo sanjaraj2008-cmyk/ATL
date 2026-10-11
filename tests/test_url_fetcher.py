@@ -29,21 +29,22 @@ class TestURLFetcher(unittest.TestCase):
         self.assertFalse(is_safe)
         self.assertIn("blocked", err.lower())
 
-    @patch("urllib.request.urlopen")
-    def test_fetch_html_success(self, mock_urlopen):
+    @patch("requests.get")
+    def test_fetch_html_success(self, mock_get):
         """Mock successful response from external landing page."""
         sample_html = (
             "<!DOCTYPE html><html><head><title>Test</title></head>"
             "<body><h1>Rates from 4.9% APR</h1><p>Fast application process.</p></body></html>"
         )
         mock_resp = MagicMock()
-        mock_resp.getcode.return_value = 200
-        mock_resp.geturl.return_value = "https://kestrelfunding.com/loans"
-        mock_resp.headers.get.return_value = "text/html; charset=utf-8"
-        mock_resp.read.return_value = sample_html.encode("utf-8")
-        mock_resp.__enter__.return_value = mock_resp
+        mock_resp.status_code = 200
+        mock_resp.url = "https://kestrelfunding.com/loans"
+        mock_resp.headers = {"Content-Type": "text/html; charset=utf-8"}
+        mock_resp.content = sample_html.encode("utf-8")
+        mock_resp.text = sample_html
+        mock_resp.history = []
 
-        mock_urlopen.return_value = mock_resp
+        mock_get.return_value = mock_resp
 
         # Bypass DNS resolution check for mocked domain
         with patch.object(self.fetcher, "is_safe_url", return_value=(True, None)):
@@ -56,8 +57,8 @@ class TestURLFetcher(unittest.TestCase):
             self.assertEqual(meta["final_url"], "https://kestrelfunding.com/loans")
             self.assertIsNotNone(meta["content_hash"])
 
-    @patch("urllib.request.urlopen")
-    def test_audit_url_integration(self, mock_urlopen):
+    @patch("requests.get")
+    def test_audit_url_integration(self, mock_get):
         """AuditEngine.audit_url executes full 7-phase audit from live URL."""
         sample_html = (
             "<!DOCTYPE html><html><body>"
@@ -66,12 +67,13 @@ class TestURLFetcher(unittest.TestCase):
             "</body></html>"
         )
         mock_resp = MagicMock()
-        mock_resp.getcode.return_value = 200
-        mock_resp.geturl.return_value = "https://example.com"
-        mock_resp.headers.get.return_value = "text/html"
-        mock_resp.read.return_value = sample_html.encode("utf-8")
-        mock_resp.__enter__.return_value = mock_resp
-        mock_urlopen.return_value = mock_resp
+        mock_resp.status_code = 200
+        mock_resp.url = "https://example.com"
+        mock_resp.headers = {"Content-Type": "text/html"}
+        mock_resp.content = sample_html.encode("utf-8")
+        mock_resp.text = sample_html
+        mock_resp.history = []
+        mock_get.return_value = mock_resp
 
         with patch.object(self.engine.fetcher, "is_safe_url", return_value=(True, None)):
             result = self.engine.audit_url(

@@ -17,7 +17,17 @@ from core.schemas import AuditResult
 
 DATASET_DIR = r"c:\Users\SANJAY RAJ\Downloads\Srishti-2K26-Datasets-All\PS-03_message_match_auditor_dataset\PS-03_message_match_auditor"
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI(title="Ad-to-Landing-Page Message Match Auditor API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 engine = AuditEngine()
 
@@ -32,6 +42,7 @@ class FetchURLRequest(BaseModel):
     url: str
 
 @app.post("/api/fetch-url")
+@app.post("/fetch-url")
 def fetch_url(req: FetchURLRequest):
     html_content, err, metadata = engine.fetcher.fetch_html(req.url)
     if err:
@@ -43,6 +54,7 @@ def fetch_url(req: FetchURLRequest):
     }
 
 @app.post("/api/audit")
+@app.post("/audit")
 def run_audit(req: AuditRequest):
     try:
         if req.landing_page_url and not req.landing_page_html:
@@ -64,6 +76,7 @@ def run_audit(req: AuditRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/presets")
+@app.get("/presets")
 def get_presets():
     presets = []
     # 1. Bundled 60 pairs from benchmark dataset (works on Vercel and cloud)
@@ -115,6 +128,7 @@ def get_presets():
     return presets
 
 @app.get("/api/report")
+@app.get("/report")
 def get_report(req_id: Optional[str] = None):
     sample_file = os.path.join(BASE_DIR, "sample_audit_report.json")
     if os.path.exists(sample_file):

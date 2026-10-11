@@ -557,7 +557,10 @@ function switchView(viewName) {
 // =========================================================================
 async function loadPresetsDropdown() {
   try {
-    const res = await fetch('/api/presets');
+    let res = await fetch('/api/presets');
+    if (res.status === 404) {
+      res = await fetch('/presets');
+    }
     presetsList = await res.json();
     const selector = document.getElementById('preset-selector');
     selector.innerHTML = '<option value="">Choose benchmark preset...</option>';
@@ -609,11 +612,19 @@ async function fetchLiveURL() {
   statusEl.innerHTML = '<span class="text-[var(--accent)] animate-pulse">Fetching live landing page HTML...</span>';
 
   try {
-    const res = await fetch('/api/fetch-url', {
+    let res = await fetch('/api/fetch-url', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url: rawUrl })
     });
+
+    if (res.status === 404) {
+      res = await fetch('/fetch-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: rawUrl })
+      });
+    }
 
     const data = await res.json();
     if (!res.ok) {
@@ -627,7 +638,12 @@ async function fetchLiveURL() {
       <span class="text-[var(--ink-muted)]">Status: ${meta.status_code || 200} | ${meta.load_time_ms || 0}ms | ${Math.round(data.html.length / 1024)} KB</span>
     `;
   } catch (err) {
-    statusEl.innerHTML = `<span class="text-rose-600 dark:text-rose-400 font-bold">Error: ${err.message}</span>`;
+    statusEl.innerHTML = `
+      <div class="space-y-1">
+        <span class="text-rose-600 dark:text-rose-400 font-bold">Fetch Notice: ${err.message}</span>
+        <div class="text-[10px] text-[var(--ink-muted)]">Tip: If this website blocks cloud scrapers, you can paste its HTML directly into the "Raw HTML" tab or upload a file.</div>
+      </div>
+    `;
   } finally {
     fetchBtn.disabled = false;
   }
@@ -696,11 +712,19 @@ async function executeAudit() {
   }
 
   try {
-    const resp = await fetch('/api/audit', {
+    let resp = await fetch('/api/audit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(auditPayload)
     });
+
+    if (resp.status === 404) {
+      resp = await fetch('/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(auditPayload)
+      });
+    }
 
     if (!resp.ok) {
       const errData = await resp.json().catch(() => ({}));
