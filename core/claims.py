@@ -98,6 +98,18 @@ class ClaimsDecomposer:
             qualifiers.append("terms apply")
         if re.search(r'\bwith\s*(?:valid\s*)?\.edu\s*email\b', clause_lower):
             qualifiers.append("requires .edu email")
+        if re.search(r'\bfor\s*qualified\s*(?:businesses|buyers|borrowers|applicants)\b', clause_lower):
+            qualifiers.append("for qualified businesses")
+        if re.search(r'\b(?:all|bad)\s*credit\s*(?:types\s*)?considered\b', clause_lower):
+            qualifiers.append("all credit types considered")
+        if re.search(r'\bno\s*collateral\s*(?:required|needed)\b', clause_lower):
+            qualifiers.append("no collateral required")
+        if re.search(r'\b(?:orders\s*)?(?:over|above)\s*\$(\d+)\b', clause_lower):
+            m = re.search(r'\b(?:orders\s*)?(?:over|above)\s*\$(\d+)\b', clause_lower)
+            qualifiers.append(f"orders over ${m.group(1)}")
+        if re.search(r'\bbusinesses\s*under\s*(\d+)\s*years\b', clause_lower):
+            m = re.search(r'\bbusinesses\s*under\s*(\d+)\s*years\b', clause_lower)
+            qualifiers.append(f"businesses under {m.group(1)} years")
         return qualifiers
 
     def _parse_clause(
