@@ -37,6 +37,8 @@ class AuditRequest(BaseModel):
     landing_page_html: Optional[str] = None
     landing_page_url: Optional[str] = None
     ad_call_to_action: Optional[str] = None
+    snapshot_source_url: Optional[str] = None
+    snapshot_hash: Optional[str] = None
 
 class FetchURLRequest(BaseModel):
     url: str
@@ -57,6 +59,14 @@ def fetch_url(req: FetchURLRequest):
 @app.post("/audit")
 def run_audit(req: AuditRequest):
     try:
+        # P0 Stale Snapshot Safety Guardrail:
+        stale_warning = None
+        if req.landing_page_url and req.snapshot_source_url:
+            norm_target = req.landing_page_url.strip().lower().rstrip('/')
+            norm_snapshot = req.snapshot_source_url.strip().lower().rstrip('/')
+            if norm_target != norm_snapshot:
+                stale_warning = f"SNAPSHOT_URL_MISMATCH: Provided snapshot was captured from '{req.snapshot_source_url}', but target is '{req.landing_page_url}'."
+
         if req.landing_page_url and not req.landing_page_html:
             result = engine.audit_url(
                 ad_headline=req.ad_headline,
@@ -69,8 +79,19 @@ def run_audit(req: AuditRequest):
                 ad_headline=req.ad_headline,
                 ad_description=req.ad_description,
                 landing_page_html=req.landing_page_html or "",
-                ad_call_to_action=req.ad_call_to_action
+                ad_call_to_action=req.ad_call_to_action,
+                snapshot_id=req.snapshot_hash
             )
+
+        if stale_warning:
+            result.audit_warnings.append(stale_warning)
+
+        # Record provenance in audit metadata
+        if req.snapshot_source_url:
+            result.audit_metadata["snapshot_source_url"] = req.snapshot_source_url
+        if req.snapshot_hash:
+            result.audit_metadata["snapshot_hash"] = req.snapshot_hash
+
         return result.to_dict()
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

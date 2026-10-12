@@ -7,6 +7,25 @@ let currentAuditResult = null;
 let auditHistory = [];
 let presetsList = [];
 
+// Explicit Snapshot Source-Binding State (Fixes Stale Snapshot P0 Bug)
+let activeSnapshot = {
+  sourceUrl: null,
+  html: null,
+  contentHash: null,
+  fetchedAt: null,
+  isStale: false
+};
+
+function escapeHTML(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 // Three.js Metic 3D Magnifying Glass State
 let stage, canvas, renderer, scene, camera, rig, head;
 let isPickedUp = false;
@@ -26,6 +45,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   initMetic3DMagnifyingGlass();
   await loadPresetsDropdown();
+
+  // Attach listener to track URL edits against active snapshot
+  const urlInput = document.getElementById('input-url');
+  if (urlInput) {
+    urlInput.addEventListener('input', handleURLInputChange);
+  }
 });
 
 // =========================================================================
@@ -597,6 +622,51 @@ function switchLandingInputTab(tab) {
   }
 }
 
+function updateSnapshotBanner() {
+  const banner = document.getElementById('snapshot-status-banner');
+  if (!banner) return;
+  if (!activeSnapshot.sourceUrl) {
+    banner.classList.add('hidden');
+    banner.innerHTML = '';
+    return;
+  }
+
+  if (activeSnapshot.isStale) {
+    banner.className = "text-xs font-mono p-2.5 rounded-lg border border-amber-400 bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-200 flex items-center justify-between";
+    banner.innerHTML = `
+      <div class="flex items-center space-x-2">
+        <i data-lucide="alert-circle" class="w-4 h-4 text-amber-600 shrink-0"></i>
+        <span><strong>URL Changed:</strong> Snapshot was captured from <code class="px-1 py-0.5 bg-black/5 dark:bg-white/10 rounded">${escapeHTML(activeSnapshot.sourceUrl)}</code>. Re-fetch or verify live.</span>
+      </div>
+      <button type="button" onclick="fetchLiveURL()" class="ml-2 px-2.5 py-1 text-[11px] font-bold rounded bg-amber-600 text-white hover:bg-amber-700 transition">Re-Fetch</button>
+    `;
+    banner.classList.remove('hidden');
+  } else {
+    banner.className = "text-xs font-mono p-2.5 rounded-lg border border-emerald-400/50 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-800 dark:text-emerald-200 flex items-center justify-between";
+    banner.innerHTML = `
+      <div class="flex items-center space-x-2">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+        <span>Snapshot bound to <code class="px-1 py-0.5 bg-black/5 dark:bg-white/10 rounded">${escapeHTML(activeSnapshot.sourceUrl)}</code> [Hash: ${activeSnapshot.contentHash || 'verified'}]</span>
+      </div>
+      <span class="text-[10px] text-[var(--ink-muted)]">${activeSnapshot.fetchedAt || ''}</span>
+    `;
+    banner.classList.remove('hidden');
+  }
+  lucide.createIcons();
+}
+
+function handleURLInputChange() {
+  const urlInput = document.getElementById('input-url');
+  if (!urlInput) return;
+  const currentVal = urlInput.value.trim();
+  if (activeSnapshot.sourceUrl && currentVal !== activeSnapshot.sourceUrl) {
+    activeSnapshot.isStale = true;
+  } else if (activeSnapshot.sourceUrl && currentVal === activeSnapshot.sourceUrl) {
+    activeSnapshot.isStale = false;
+  }
+  updateSnapshotBanner();
+}
+
 async function fetchLiveURL() {
   const urlInput = document.getElementById('input-url');
   const statusEl = document.getElementById('fetch-status');
@@ -633,6 +703,17 @@ async function fetchLiveURL() {
 
     document.getElementById('input-html').value = data.html;
     const meta = data.metadata || {};
+    
+    // Bind active snapshot to this exact URL and content hash
+    activeSnapshot = {
+      sourceUrl: rawUrl,
+      html: data.html,
+      contentHash: meta.content_hash || null,
+      fetchedAt: new Date().toLocaleTimeString(),
+      isStale: false
+    };
+    updateSnapshotBanner();
+
     statusEl.innerHTML = `
       <span class="text-emerald-600 dark:text-emerald-400 font-bold">✓ Fetched successfully!</span>
       <span class="text-[var(--ink-muted)]">Status: ${meta.status_code || 200} | ${meta.load_time_ms || 0}ms | ${Math.round(data.html.length / 1024)} KB</span>
@@ -657,6 +738,14 @@ function loadPreset(idx) {
     document.getElementById('input-desc').value = item.ad_description;
     document.getElementById('input-html').value = item.html;
     if (item.html) {
+      activeSnapshot = {
+        sourceUrl: null,
+        html: item.html,
+        contentHash: null,
+        fetchedAt: 'Preset Loaded',
+        isStale: false
+      };
+      updateSnapshotBanner();
       switchLandingInputTab('html');
     }
   }
@@ -676,6 +765,14 @@ function handleFileUpload(event) {
     const reader = new FileReader();
     reader.onload = (e) => {
       document.getElementById('input-html').value = e.target.result;
+      activeSnapshot = {
+        sourceUrl: file.name,
+        html: e.target.result,
+        contentHash: null,
+        fetchedAt: `File Upload (${file.name})`,
+        isStale: false
+      };
+      updateSnapshotBanner();
       switchLandingInputTab('html');
     };
     reader.readAsText(file);
@@ -701,14 +798,56 @@ async function executeAudit() {
 
   if (activeLandingTab === 'url') {
     const liveUrl = document.getElementById('input-url').value.trim();
-    if (html && html.trim().length > 100) {
-      auditPayload.landing_page_html = html;
+    if (!liveUrl) {
+      alert("Please enter a destination landing page URL.");
+      runBtn.disabled = false;
+      runBtn.innerHTML = `<span>Verify Message Match</span>`;
+      return;
+    }
+
+    // Check for Stale Snapshot Mismatch
+    if (activeSnapshot.sourceUrl && activeSnapshot.isStale) {
+      const confirmProceed = confirm(
+        `Warning: The landing page URL was changed to "${liveUrl}", but the captured HTML snapshot belongs to "${activeSnapshot.sourceUrl}".\n\nClick OK to fetch fresh content from "${liveUrl}", or Cancel to abort.`
+      );
+      if (!confirmProceed) {
+        runBtn.disabled = false;
+        runBtn.innerHTML = `<span>Verify Message Match</span>`;
+        return;
+      }
+      // Re-fetch fresh URL first before running audit
+      await fetchLiveURL();
+      auditPayload.landing_page_html = document.getElementById('input-html').value.trim();
       auditPayload.landing_page_url = liveUrl;
+    } else if (activeSnapshot.sourceUrl && activeSnapshot.sourceUrl === liveUrl && activeSnapshot.html) {
+      // Use verified bound snapshot
+      auditPayload.landing_page_html = activeSnapshot.html;
+      auditPayload.landing_page_url = liveUrl;
+      auditPayload.snapshot_source_url = activeSnapshot.sourceUrl;
+      auditPayload.snapshot_hash = activeSnapshot.contentHash;
     } else {
+      // Direct live URL audit requested
       auditPayload.landing_page_url = liveUrl;
+      if (html && html.trim().length > 100) {
+        auditPayload.landing_page_html = html;
+        if (activeSnapshot.sourceUrl) {
+          auditPayload.snapshot_source_url = activeSnapshot.sourceUrl;
+          auditPayload.snapshot_hash = activeSnapshot.contentHash;
+        }
+      }
     }
   } else {
+    if (!html || html.trim().length < 10) {
+      alert("Please paste the destination landing page HTML or upload a file.");
+      runBtn.disabled = false;
+      runBtn.innerHTML = `<span>Verify Message Match</span>`;
+      return;
+    }
     auditPayload.landing_page_html = html;
+    if (activeSnapshot.sourceUrl) {
+      auditPayload.snapshot_source_url = activeSnapshot.sourceUrl;
+      auditPayload.snapshot_hash = activeSnapshot.contentHash;
+    }
   }
 
   try {
