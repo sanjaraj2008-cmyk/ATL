@@ -951,25 +951,35 @@ function renderAuditResults(data) {
             <i data-lucide="alert-triangle" class="w-3.5 h-3.5 text-amber-600 dark:text-amber-400"></i>
             <span>Potential Compliance / Disclosure Review</span>
           </div>
-          <p class="leading-relaxed font-sans">${f.regulatory_review_note}</p>
+          <p class="leading-relaxed font-sans">${escapeHTML(f.regulatory_review_note)}</p>
         </div>
       `;
     }
 
     let evidenceHtml = '';
     if (f.primary_evidence) {
-      const offsetsStr = f.primary_evidence.source_start_offset !== null && f.primary_evidence.source_start_offset !== undefined ? ` | Offsets: [${f.primary_evidence.source_start_offset}:${f.primary_evidence.source_end_offset}]` : '';
-      const selectorStr = f.primary_evidence.selector_path ? ` | Selector: <code>${f.primary_evidence.selector_path}</code>` : '';
+      const offsetsStr = (f.primary_evidence.source_start_offset !== null && f.primary_evidence.source_start_offset !== undefined) ? ` | Offsets: [${Number(f.primary_evidence.source_start_offset)}:${Number(f.primary_evidence.source_end_offset)}]` : '';
+      const selectorStr = f.primary_evidence.selector_path ? ` | Selector: <code>${escapeHTML(f.primary_evidence.selector_path)}</code>` : '';
+      const isVerified = Boolean(f.primary_evidence.is_verified);
+      const verificationBadge = isVerified ? `
+        <span class="font-bold text-[var(--accent)] flex items-center space-x-1.5">
+          <i data-lucide="check" class="w-3.5 h-3.5"></i>
+          <span>VERIFIED IN SOURCE DOM</span>
+        </span>
+      ` : `
+        <span class="font-bold text-amber-600 dark:text-amber-400 flex items-center space-x-1.5">
+          <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+          <span>UNVERIFIED / HEURISTIC MATCH</span>
+        </span>
+      `;
+
       evidenceHtml = `
-        <div class="mt-4 p-4 rounded-xl bg-[var(--paper)] precision-border-l border-l-[var(--accent)] border border-[var(--line-border)]">
+        <div class="mt-4 p-4 rounded-xl bg-[var(--paper)] precision-border-l ${isVerified ? 'border-l-[var(--accent)]' : 'border-l-amber-500'} border border-[var(--line-border)]">
           <div class="flex flex-wrap items-center justify-between text-xs font-mono text-[var(--ink-secondary)] mb-1.5">
-            <span class="font-bold text-[var(--accent)] flex items-center space-x-1.5">
-              <i data-lucide="check" class="w-3.5 h-3.5"></i>
-              <span>VERIFIED IN SOURCE DOM</span>
-            </span>
-            <span>ZONE: <b class="text-[var(--ink)]">${f.primary_evidence.dom_zone}</b> (&lt;${f.primary_evidence.tag_name}&gt;, Block ${f.primary_evidence.block_id}${selectorStr})${offsetsStr}</span>
+            ${verificationBadge}
+            <span>ZONE: <b class="text-[var(--ink)]">${escapeHTML(f.primary_evidence.dom_zone)}</b> (&lt;${escapeHTML(f.primary_evidence.tag_name)}&gt;, Block ${escapeHTML(f.primary_evidence.block_id)}${selectorStr})${offsetsStr}</span>
           </div>
-          <p class="font-mono text-sm text-[var(--ink)] italic pl-1">"${f.primary_evidence.quote}"</p>
+          <p class="font-mono text-sm text-[var(--ink)] italic pl-1">"${escapeHTML(f.primary_evidence.quote)}"</p>
         </div>
       `;
     }
@@ -986,12 +996,12 @@ function renderAuditResults(data) {
             <span class="text-[10px] text-[var(--ink-muted)]">Click to expand</span>
           </summary>
           <div class="p-4 border-t border-[var(--line-border)] space-y-2 font-mono text-[11px] leading-relaxed">
-            <div><b class="text-[var(--ink)]">Ad Promise:</b> ${f.mismatch_details.original_ad_claim}</div>
-            <div><b class="text-[var(--ink)]">Page Finding:</b> ${f.mismatch_details.landing_page_finding}</div>
-            <div><b class="text-[var(--ink)]">Discrepancy:</b> ${f.mismatch_details.discrepancy_description}</div>
-            <div><b class="text-[var(--ink)]">Significance:</b> ${f.mismatch_details.practical_significance}</div>
-            <div><b class="text-[var(--ink)]">Conditions & Visibility:</b> ${f.mismatch_details.conditions_and_visibility}</div>
-            <div><b class="text-[var(--ink)]">Audit Certainty:</b> ${f.mismatch_details.certainty_level}</div>
+            <div><b class="text-[var(--ink)]">Ad Promise:</b> ${escapeHTML(f.mismatch_details.original_ad_claim)}</div>
+            <div><b class="text-[var(--ink)]">Page Finding:</b> ${escapeHTML(f.mismatch_details.landing_page_finding)}</div>
+            <div><b class="text-[var(--ink)]">Discrepancy:</b> ${escapeHTML(f.mismatch_details.discrepancy_description)}</div>
+            <div><b class="text-[var(--ink)]">Significance:</b> ${escapeHTML(f.mismatch_details.practical_significance)}</div>
+            <div><b class="text-[var(--ink)]">Conditions & Visibility:</b> ${escapeHTML(f.mismatch_details.conditions_and_visibility)}</div>
+            <div><b class="text-[var(--ink)]">Audit Certainty:</b> ${escapeHTML(f.mismatch_details.certainty_level)}</div>
           </div>
         </details>
       `;
@@ -1001,24 +1011,24 @@ function renderAuditResults(data) {
       <div class="flex flex-col md:flex-row md:items-start justify-between gap-4">
         <div>
           <div class="flex items-center space-x-2.5">
-            <span class="status-pill ${statusClass}">${f.status}</span>
-            <span class="text-[11px] font-mono text-[var(--ink-muted)]">CLAIM ${f.claim_id}</span>
+            <span class="status-pill ${statusClass}">${escapeHTML(f.status)}</span>
+            <span class="text-[11px] font-mono text-[var(--ink-muted)]">CLAIM ${escapeHTML(f.claim_id)}</span>
           </div>
-          <h4 class="editorial-title text-2xl text-[var(--ink)] mt-2">${f.ad_claim_text}</h4>
+          <h4 class="editorial-title text-2xl text-[var(--ink)] mt-2">${escapeHTML(f.ad_claim_text)}</h4>
           
           <div class="mt-3 p-3.5 rounded-xl bg-[var(--paper-subtle)] border border-[var(--line-border)] flex items-start gap-2.5">
             <span class="text-base select-none">💡</span>
             <div>
               <div class="text-[11px] font-mono font-bold uppercase tracking-wider text-[var(--accent)] mb-0.5">Plain-English Explanation</div>
-              <p class="text-sm text-[var(--ink)] font-normal leading-relaxed">${f.plain_summary || f.explanation}</p>
+              <p class="text-sm text-[var(--ink)] font-normal leading-relaxed">${escapeHTML(f.plain_summary || f.explanation)}</p>
             </div>
           </div>
         </div>
 
         <div class="text-left md:text-right text-xs font-mono text-[var(--ink-muted)] shrink-0 space-y-0.5">
-          <div>REASON: <b class="text-[var(--ink)]">${f.reason_code}</b></div>
-          <div>SEVERITY: <b class="${isCritical ? 'text-[var(--accent)]' : 'text-[var(--ink)]'}">${f.severity}</b></div>
-          <div>MATERIALITY: <b class="text-[var(--ink)]">${f.claim_materiality}</b></div>
+          <div>REASON: <b class="text-[var(--ink)]">${escapeHTML(f.reason_code)}</b></div>
+          <div>SEVERITY: <b class="${isCritical ? 'text-[var(--accent)]' : 'text-[var(--ink)]'}">${escapeHTML(f.severity)}</b></div>
+          <div>MATERIALITY: <b class="text-[var(--ink)]">${escapeHTML(f.claim_materiality)}</b></div>
         </div>
       </div>
 
@@ -1032,7 +1042,7 @@ function renderAuditResults(data) {
             <i data-lucide="edit-2" class="w-3.5 h-3.5 text-[var(--accent)]"></i>
             <span>Recommended Ad Adjustment:</span>
           </div>
-          <p class="text-[var(--ink-secondary)] leading-relaxed">${f.recommended_ad_fix}</p>
+          <p class="text-[var(--ink-secondary)] leading-relaxed">${escapeHTML(f.recommended_ad_fix)}</p>
         </div>
 
         <div class="p-4 rounded-xl bg-[var(--paper)] border border-[var(--line-border)]">
@@ -1040,7 +1050,7 @@ function renderAuditResults(data) {
             <i data-lucide="layout" class="w-3.5 h-3.5 text-[var(--accent)]"></i>
             <span>Recommended Page Adjustment:</span>
           </div>
-          <p class="text-[var(--ink-secondary)] leading-relaxed">${f.recommended_page_fix}</p>
+          <p class="text-[var(--ink-secondary)] leading-relaxed">${escapeHTML(f.recommended_page_fix)}</p>
         </div>
       </div>
     `;
@@ -1063,10 +1073,10 @@ function renderHistory() {
     item.className = "editorial-card p-5 rounded-2xl flex items-center justify-between";
     item.innerHTML = `
       <div>
-        <h4 class="editorial-title text-xl text-[var(--ink)]">${h.headline}</h4>
-        <span class="text-xs font-mono text-[var(--ink-muted)]">Timestamp: ${h.timestamp} · Grade: <b>${h.grade}</b></span>
+        <h4 class="editorial-title text-xl text-[var(--ink)]">${escapeHTML(h.headline)}</h4>
+        <span class="text-xs font-mono text-[var(--ink-muted)]">Timestamp: ${escapeHTML(h.timestamp)} · Grade: <b>${escapeHTML(h.grade)}</b></span>
       </div>
-      <div class="text-3xl editorial-title text-[var(--accent)]">${h.score}/100</div>
+      <div class="text-3xl editorial-title text-[var(--accent)]">${escapeHTML(h.score)}/100</div>
     `;
     list.appendChild(item);
   });
