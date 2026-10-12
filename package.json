@@ -1,0 +1,26 @@
+{
+  "name": "primary",
+  "version": "1.0.0",
+  "description": "An offline-first, evidence-grounded compliance auditor that verifies whether a landing page delivers on the promises made in its advertising copy.",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sanjaraj2008-cmyk/ATL.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sanjaraj2008-cmyk/ATL/issues"
+  },
+  "homepage": "https://github.com/sanjaraj2008-cmyk/ATL#readme",
+  "dependencies": {
+    "@vercel/analytics": "^2.0.1"
+  }
+}
