@@ -1,12 +1,11 @@
 {
-  "version": 2,
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api/index.py"
+      "destination": "/api/index.py?path=/api/$1"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!api/|static/|favicon.ico).*)",
       "destination": "/index.html"
     }
   ]

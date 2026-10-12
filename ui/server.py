@@ -18,9 +18,44 @@ from core.schemas import AuditResult
 DATASET_DIR = r"c:\Users\SANJAY RAJ\Downloads\Srishti-2K26-Datasets-All\PS-03_message_match_auditor_dataset\PS-03_message_match_auditor"
 
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.types import ASGIApp, Scope, Receive, Send
+from urllib.parse import parse_qs
+
+class VercelPathRewriterMiddleware:
+    """
+    Ensures that when Vercel routes requests using rewritten destination paths
+    (such as /api/index.py or /api/index.py?path=...), the request path in the
+    ASGI scope is seamlessly normalized to the intended endpoint route
+    (/api/audit, /api/fetch-url, /api/presets, /api/report).
+    """
+    def __init__(self, app: ASGIApp):
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send):
+        if scope["type"] == "http":
+            path = scope.get("path", "")
+            if path in ("/api/index.py", "/api/index", "/api", "/api/"):
+                # 1. Check query string for explicit path parameter
+                qs = scope.get("query_string", b"").decode("utf-8")
+                params = parse_qs(qs)
+                if "path" in params and params["path"]:
+                    target_path = params["path"][0]
+                    scope["path"] = target_path.split("?")[0]
+                else:
+                    # 2. Check Vercel edge rewrite headers
+                    headers = dict(scope.get("headers", []))
+                    matched = (
+                        headers.get(b"x-matched-path", b"").decode("utf-8")
+                        or headers.get(b"x-forwarded-uri", b"").decode("utf-8")
+                        or headers.get(b"x-real-path", b"").decode("utf-8")
+                    )
+                    if matched and not matched.startswith("/api/index.py"):
+                        scope["path"] = matched.split("?")[0]
+        await self.app(scope, receive, send)
 
 app = FastAPI(title="Ad-to-Landing-Page Message Match Auditor API")
 
+app.add_middleware(VercelPathRewriterMiddleware)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
