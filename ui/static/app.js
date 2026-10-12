@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTheme();
   initMetic3DMagnifyingGlass();
   await loadPresetsDropdown();
+  loadHistoryFromStorage();
 
   // Attach listener to track URL edits against active snapshot
   const urlInput = document.getElementById('input-url');
@@ -878,16 +879,41 @@ async function executeAudit() {
     const data = await resp.json();
     currentAuditResult = data;
 
-    auditHistory.unshift({
-      timestamp: new Date().toLocaleTimeString(),
+    // Check if there was a previous audit for this target URL to compute drift
+    const prevAudit = auditHistory.find(h => h.url && targetUrl && h.url.trim().toLowerCase() === targetUrl.trim().toLowerCase());
+    let diffInfo = null;
+    if (prevAudit && prevAudit.score !== null && data.match_score !== null) {
+      diffInfo = {
+        prevScore: prevAudit.score,
+        prevGrade: prevAudit.grade,
+        scoreDelta: data.match_score - prevAudit.score,
+        prevTimestamp: prevAudit.timestamp,
+        prevCriticalCount: prevAudit.criticalCount || 0
+      };
+    }
+
+    const historyItem = {
+      id: 'audit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
+      timestamp: new Date().toLocaleString(),
+      campaign: campaignName || 'General Campaign',
       headline: headline,
+      description: description,
+      cta: cta,
+      url: targetUrl || activeSnapshot.sourceUrl || '',
       score: data.match_score,
       grade: data.grade,
+      criticalCount: (data.findings || []).filter(f => f.severity === 'CRITICAL' || f.status === 'CONTRADICTED').length,
+      hasLiability: data.has_critical_marketing_liability || false,
+      diffInfo: diffInfo,
       data: data
-    });
-    document.getElementById('history-count').textContent = auditHistory.length;
+    };
 
-    renderAuditResults(data);
+    auditHistory.unshift(historyItem);
+    saveHistoryToStorage();
+    const countBadge = document.getElementById('history-count');
+    if (countBadge) countBadge.textContent = auditHistory.length;
+
+    renderAuditResults(data, diffInfo);
     document.getElementById('results-container').scrollIntoView({ behavior: 'smooth' });
 
   } catch (err) {
@@ -902,9 +928,42 @@ async function executeAudit() {
   }
 }
 
-function renderAuditResults(data) {
+function renderAuditResults(data, diffInfo = null) {
   const container = document.getElementById('results-container');
   container.classList.remove('hidden');
+
+  // Render Re-Audit Diff / Drift Banner if applicable
+  const diffBanner = document.getElementById('reaudit-diff-banner');
+  if (diffBanner) {
+    if (diffInfo) {
+      const deltaSign = diffInfo.scoreDelta >= 0 ? '+' : '';
+      const isPositive = diffInfo.scoreDelta >= 0;
+      const deltaBg = isPositive
+        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-400 text-emerald-800 dark:text-emerald-200'
+        : 'bg-red-50 dark:bg-red-950/40 border-red-400 text-red-800 dark:text-red-200';
+      const iconName = isPositive ? 'trending-up' : 'trending-down';
+      diffBanner.className = `p-4 rounded-2xl border text-xs font-mono flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm ${deltaBg}`;
+      diffBanner.innerHTML = `
+        <div class="flex items-center space-x-3">
+          <i data-lucide="${iconName}" class="w-5 h-5 shrink-0 ${isPositive ? 'text-emerald-600' : 'text-red-600'}"></i>
+          <div>
+            <div class="font-bold tracking-wide">RE-AUDIT COMPARISON VS PREVIOUS RUN</div>
+            <div class="text-[11px] opacity-90 mt-0.5 font-sans">
+              Score shifted from <b>${diffInfo.prevScore}/100</b> (${escapeHTML(diffInfo.prevGrade)}) to <b>${data.match_score}/100</b> (${escapeHTML(data.grade)}) ·
+              Delta: <b class="text-sm font-mono">${deltaSign}${diffInfo.scoreDelta} pts</b> · Prior run: ${escapeHTML(diffInfo.prevTimestamp)}
+            </div>
+          </div>
+        </div>
+        <button type="button" onclick="switchView('history')" class="px-3 py-1 text-[11px] font-bold rounded-lg border border-current hover:bg-black/5 dark:hover:bg-white/10 transition self-start sm:self-center">
+          View History
+        </button>
+      `;
+      diffBanner.classList.remove('hidden');
+    } else {
+      diffBanner.classList.add('hidden');
+      diffBanner.innerHTML = '';
+    }
+  }
 
   const liabilityBanner = document.getElementById('liability-banner');
   if (data.has_critical_marketing_liability) {
@@ -1123,30 +1182,172 @@ function renderAuditResults(data) {
   lucide.createIcons();
 }
 
+function saveHistoryToStorage() {
+  try {
+    localStorage.setItem('atl_audit_history_v1', JSON.stringify(auditHistory.slice(0, 50)));
+  } catch (e) {
+    console.warn('Failed to save audit history to localStorage:', e);
+  }
+}
+
+function loadHistoryFromStorage() {
+  try {
+    const raw = localStorage.getItem('atl_audit_history_v1');
+    if (raw) {
+      auditHistory = JSON.parse(raw);
+    }
+  } catch (e) {
+    auditHistory = [];
+  }
+  const countBadge = document.getElementById('history-count');
+  if (countBadge) countBadge.textContent = auditHistory.length;
+}
+
 function renderHistory() {
   const list = document.getElementById('history-list');
+  if (!list) return;
+
   if (auditHistory.length === 0) {
-    list.innerHTML = '<p class="text-[var(--ink-muted)] text-sm font-mono italic">No audits performed in this session yet.</p>';
+    list.innerHTML = `
+      <div class="p-10 text-center border border-dashed border-[var(--ink-secondary)]/30 rounded-2xl">
+        <i data-lucide="history" class="w-8 h-8 text-[var(--ink-muted)] mx-auto mb-2 opacity-60"></i>
+        <p class="text-[var(--ink-muted)] text-sm font-mono">No audits saved in your campaign archive yet.</p>
+        <button onclick="switchView('workspace')" class="btn-metic-primary !text-xs !py-1.5 mt-4">Start New Audit</button>
+      </div>
+    `;
+    lucide.createIcons();
     return;
   }
+
   list.innerHTML = '';
   auditHistory.forEach(h => {
     const item = document.createElement('div');
-    item.className = "editorial-card p-5 rounded-2xl flex items-center justify-between";
+    item.className = "editorial-card p-6 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4 transition hover:shadow-md";
+
+    const scoreColorClass = h.score >= 85
+      ? "text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300"
+      : (h.score >= 60
+        ? "text-amber-700 bg-amber-50 dark:bg-amber-950/40 border-amber-300"
+        : "text-red-700 bg-red-50 dark:bg-red-950/40 border-red-300");
+
+    const criticalBadge = h.criticalCount > 0
+      ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-red-100 text-red-700 border border-red-300">${h.criticalCount} Critical Issue${h.criticalCount > 1 ? 's' : ''}</span>`
+      : `<span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono bg-emerald-100 text-emerald-700 border border-emerald-300">0 Critical Issues</span>`;
+
+    const deltaBadge = h.diffInfo
+      ? `<span class="px-2 py-0.5 rounded text-[10px] font-bold font-mono ${h.diffInfo.scoreDelta >= 0 ? 'bg-emerald-100 text-emerald-800' : 'bg-red-100 text-red-800'}">Delta: ${h.diffInfo.scoreDelta >= 0 ? '+' : ''}${h.diffInfo.scoreDelta} pts</span>`
+      : '';
+
+    const urlDisplay = h.url
+      ? `<div class="text-xs font-mono text-[var(--ink-muted)] truncate max-w-md mt-1">
+           <i data-lucide="link" class="w-3 h-3 inline mr-1 opacity-70"></i>
+           <span title="${escapeHTML(h.url)}">${escapeHTML(h.url)}</span>
+         </div>`
+      : '';
+
     item.innerHTML = `
-      <div>
-        <h4 class="editorial-title text-xl text-[var(--ink)]">${escapeHTML(h.headline)}</h4>
-        <span class="text-xs font-mono text-[var(--ink-muted)]">Timestamp: ${escapeHTML(h.timestamp)} · Grade: <b>${escapeHTML(h.grade)}</b></span>
+      <div class="space-y-1.5 flex-1 min-w-0">
+        <div class="flex items-center space-x-2 flex-wrap gap-y-1">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-[var(--paper)] border border-[var(--ink-secondary)]/30 text-[var(--ink)]">${escapeHTML(h.campaign || 'Campaign')}</span>
+          ${criticalBadge}
+          ${deltaBadge}
+        </div>
+        <h4 class="editorial-title text-xl text-[var(--ink)] truncate">${escapeHTML(h.headline)}</h4>
+        ${urlDisplay}
+        <div class="text-[11px] font-mono text-[var(--ink-muted)]">
+          Captured: ${escapeHTML(h.timestamp)} · Grade: <b>${escapeHTML(h.grade || 'N/A')}</b>
+        </div>
       </div>
-      <div class="text-3xl editorial-title text-[var(--accent)]">${escapeHTML(h.score)}/100</div>
+
+      <div class="flex items-center space-x-4 shrink-0">
+        <div class="text-center px-4 py-2 rounded-xl border ${scoreColorClass}">
+          <div class="text-2xl font-black font-mono leading-none">${escapeHTML(h.score)}<span class="text-xs font-normal opacity-70">/100</span></div>
+          <div class="text-[9px] font-mono uppercase tracking-wider mt-0.5">${escapeHTML(h.grade || 'Score')}</div>
+        </div>
+
+        <div class="flex flex-col space-y-1.5">
+          <button type="button" onclick="viewReportFromHistory('${h.id}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--paper)] hover:bg-[var(--paper-contrast)] border border-[var(--ink-secondary)]/30 text-[var(--ink)] flex items-center space-x-1.5 transition cursor-pointer">
+            <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+            <span>View Report</span>
+          </button>
+          <button type="button" onclick="reAuditFromHistory('${h.id}')" class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-[var(--ink)] text-[var(--paper)] hover:opacity-90 flex items-center space-x-1.5 transition cursor-pointer">
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Re-Audit Page</span>
+          </button>
+        </div>
+
+        <button type="button" onclick="deleteHistoryItem('${h.id}', event)" title="Delete audit record" class="p-2 rounded-lg text-[var(--ink-muted)] hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer">
+          <i data-lucide="trash" class="w-4 h-4"></i>
+        </button>
+      </div>
     `;
+
     list.appendChild(item);
   });
+
+  lucide.createIcons();
+}
+
+function viewReportFromHistory(id) {
+  const item = auditHistory.find(h => h.id === id);
+  if (!item || !item.data) return;
+
+  currentAuditResult = item.data;
+  renderAuditResults(item.data, item.diffInfo);
+  switchView('workspace');
+  const resultsContainer = document.getElementById('results-container');
+  if (resultsContainer) {
+    resultsContainer.classList.remove('hidden');
+    resultsContainer.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+function reAuditFromHistory(id) {
+  const item = auditHistory.find(h => h.id === id);
+  if (!item) return;
+
+  switchView('workspace');
+
+  const inputHeadline = document.getElementById('input-headline');
+  const inputDesc = document.getElementById('input-desc');
+  const inputCta = document.getElementById('input-cta');
+  const inputCampaign = document.getElementById('input-campaign');
+  const inputUrl = document.getElementById('input-url');
+
+  if (inputHeadline) inputHeadline.value = item.headline || '';
+  if (inputDesc) inputDesc.value = item.description || '';
+  if (inputCta) inputCta.value = item.cta || '';
+  if (inputCampaign) inputCampaign.value = item.campaign !== 'General Campaign' ? item.campaign : '';
+  if (inputUrl && item.url) {
+    inputUrl.value = item.url;
+    switchLandingInputTab('url');
+  }
+
+  // Visual highlight to prompt immediate re-audit
+  const formCard = document.querySelector('#view-workspace .editorial-card');
+  if (formCard) {
+    formCard.scrollIntoView({ behavior: 'smooth' });
+    formCard.classList.add('ring-2', 'ring-[var(--accent)]');
+    setTimeout(() => formCard.classList.remove('ring-2', 'ring-[var(--accent)]'), 2500);
+  }
+}
+
+function deleteHistoryItem(id, event) {
+  if (event) event.stopPropagation();
+  auditHistory = auditHistory.filter(h => h.id !== id);
+  saveHistoryToStorage();
+  const countBadge = document.getElementById('history-count');
+  if (countBadge) countBadge.textContent = auditHistory.length;
+  renderHistory();
 }
 
 function clearHistory() {
+  if (auditHistory.length === 0) return;
+  if (!confirm('Are you sure you want to clear all audit history?')) return;
   auditHistory = [];
-  document.getElementById('history-count').textContent = '0';
+  saveHistoryToStorage();
+  const countBadge = document.getElementById('history-count');
+  if (countBadge) countBadge.textContent = '0';
   renderHistory();
 }
 
