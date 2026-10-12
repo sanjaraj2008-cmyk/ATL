@@ -67,6 +67,16 @@ function initMetic3DMagnifyingGlass() {
   const scanTarget = document.querySelector('#scanTarget');
   if (!stage || !canvas) return;
 
+  // Mobile Performance Guardrail:
+  // On mobile screens (<768px), disable heavy WebGL 3D render loops and high-overhead backdrop-filter
+  // to completely eliminate lagging, battery drain, and touch event conflicts.
+  if (window.innerWidth < 768) {
+    if (stage) stage.style.display = 'none';
+    if (xrayLens) xrayLens.style.display = 'none';
+    if (scanStatus) scanStatus.style.display = 'none';
+    return;
+  }
+
   const width = stage.clientWidth || 480;
   const height = stage.clientHeight || 480;
 
@@ -510,10 +520,92 @@ function initMetic3DMagnifyingGlass() {
     }
   }
   window.addEventListener('resize', () => {
+    if (window.innerWidth < 768) {
+      if (stage) stage.style.display = 'none';
+      if (xrayLens) xrayLens.style.display = 'none';
+      if (scanStatus) scanStatus.style.display = 'none';
+      return;
+    } else {
+      if (stage) stage.style.display = '';
+      if (xrayLens) xrayLens.style.display = '';
+      if (scanStatus) scanStatus.style.display = '';
+    }
     if (!isPickedUp) dockStageToPlaceholder();
     else onResize();
   });
   onResize();
+}
+
+// =========================================================================
+// 1B. DEDICATED MOBILE EVIDENCE LOUPE DEMO COMPONENT
+// Lightweight, buttery-smooth 60fps CSS/DOM component for mobile devices
+// =========================================================================
+const mobileDemoScenarios = {
+  duration: {
+    claimText: '30-Day Free Trial',
+    claimSub: 'No credit card required. Full team access.',
+    status: 'CONTRADICTED',
+    statusClass: 'status-contradicted',
+    pageQuote: '“Start your 7-day trial. Credit card required for activation.”',
+    domZone: 'HERO_SECTION',
+    tag: 'h2.pricing-tier',
+    fixText: 'Update ad to state “7-Day Trial” or honor advertised 30 days.'
+  },
+  pricing: {
+    claimText: 'Free Forever Plan',
+    claimSub: 'Manage contacts and deals at ₹0 per month.',
+    status: 'SUPPORTED',
+    statusClass: 'status-supported',
+    pageQuote: '“Free Tools: Get started at ₹0/mo. No credit card required.”',
+    domZone: 'HERO_SECTION',
+    tag: 'div.pricing-cta > p',
+    fixText: 'Message match verified against hero pricing table.'
+  },
+  discount: {
+    claimText: 'Guaranteed 90% Off',
+    claimSub: 'Unlock all pro features at a flat 90% discount.',
+    status: 'NOT_FOUND',
+    statusClass: 'status-not-found',
+    pageQuote: '“Save up to 16% on annual billing.” (90% offer not found)',
+    domZone: 'MAIN_BODY',
+    tag: 'span.billing-toggle',
+    fixText: 'Remove unsubstantiated 90% claim from ad creative.'
+  }
+};
+
+function selectMobileLoupeScenario(key) {
+  const sc = mobileDemoScenarios[key];
+  if (!sc) return;
+
+  const btnDuration = document.getElementById('mob-chip-duration');
+  const btnPricing = document.getElementById('mob-chip-pricing');
+  const btnDiscount = document.getElementById('mob-chip-discount');
+
+  const chipInactive = "px-3 py-1 rounded-full text-[11px] font-mono border border-[var(--line-strong)] bg-[var(--paper)] text-[var(--ink-secondary)] transition cursor-pointer";
+  const chipActive = "px-3 py-1 rounded-full text-[11px] font-mono border border-[var(--accent)] bg-[var(--surface-card)] text-[var(--accent)] font-bold shadow-sm transition cursor-pointer";
+
+  if (btnDuration) btnDuration.className = key === 'duration' ? chipActive : chipInactive;
+  if (btnPricing) btnPricing.className = key === 'pricing' ? chipActive : chipInactive;
+  if (btnDiscount) btnDiscount.className = key === 'discount' ? chipActive : chipInactive;
+
+  const claimTitle = document.getElementById('mob-claim-title');
+  const claimSub = document.getElementById('mob-claim-sub');
+  const statusPill = document.getElementById('mob-status-pill');
+  const quoteElem = document.getElementById('mob-quote');
+  const zoneElem = document.getElementById('mob-zone');
+  const fixElem = document.getElementById('mob-fix');
+
+  if (claimTitle) claimTitle.textContent = sc.claimText;
+  if (claimSub) claimSub.textContent = sc.claimSub;
+  if (statusPill) {
+    statusPill.textContent = sc.status;
+    statusPill.className = `status-pill ${sc.statusClass}`;
+  }
+  if (quoteElem) quoteElem.textContent = sc.pageQuote;
+  if (zoneElem) zoneElem.textContent = `📍 DOM: ${sc.domZone} (${sc.tag})`;
+  if (fixElem) fixElem.textContent = sc.fixText;
+
+  lucide.createIcons();
 }
 
 

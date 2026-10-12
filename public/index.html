@@ -45,9 +45,9 @@
   </div>
 
   <!-- FIXED NAVIGATION (METIC STYLE) -->
-  <header class="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur-md precision-border-b px-8 py-3.5 flex items-center justify-between transition-colors">
-    <div class="flex items-center space-x-6">
-      <a href="javascript:switchView('landing')" class="flex items-baseline text-2xl font-bold tracking-tight text-[var(--ink)] no-underline">
+  <header class="sticky top-0 z-50 bg-[var(--paper)]/90 backdrop-blur-md precision-border-b px-3 sm:px-6 lg:px-8 py-2.5 sm:py-3.5 flex items-center justify-between transition-colors">
+    <div class="flex items-center space-x-3 sm:space-x-6">
+      <a href="javascript:switchView('landing')" class="flex items-baseline text-xl sm:text-2xl font-bold tracking-tight text-[var(--ink)] no-underline">
         <span style="font-family: var(--font-sans);">auditor</span><span class="metic-dot"></span>
       </a>
       <span class="measure-tag hidden md:inline-block border-l border-[var(--line-border)] pl-4">
@@ -55,25 +55,25 @@
       </span>
     </div>
 
-    <!-- Center Navigation Pill -->
-    <nav class="flex items-center bg-[var(--surface-card)] rounded-full border border-[var(--line-strong)] p-1 shadow-sm">
-      <button onclick="switchView('landing')" id="nav-landing" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink)] bg-[var(--paper)] shadow-sm">
-        Dashboard
+    <!-- Center Navigation Pill (Mobile-Optimized Compact Control) -->
+    <nav class="flex items-center bg-[var(--surface-card)] rounded-full border border-[var(--line-strong)] p-1 shadow-sm shrink-0">
+      <button onclick="switchView('landing')" id="nav-landing" class="px-2.5 sm:px-5 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide transition text-[var(--ink)] bg-[var(--paper)] shadow-sm">
+        <span class="hidden sm:inline">Dashboard</span><span class="sm:hidden">Home</span>
       </button>
-      <button onclick="switchView('workspace')" id="nav-workspace" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink-secondary)] hover:text-[var(--ink)]">
-        New Audit
+      <button onclick="switchView('workspace')" id="nav-workspace" class="px-2.5 sm:px-5 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide transition text-[var(--ink-secondary)] hover:text-[var(--ink)]">
+        <span class="hidden sm:inline">New Audit</span><span class="sm:hidden">Audit</span>
       </button>
-      <button onclick="switchView('history')" id="nav-history" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink-secondary)] hover:text-[var(--ink)]">
-        Audit History (<span id="history-count">0</span>)
+      <button onclick="switchView('history')" id="nav-history" class="px-2.5 sm:px-5 py-1 sm:py-1.5 rounded-full text-[11px] sm:text-xs font-semibold tracking-wide transition text-[var(--ink-secondary)] hover:text-[var(--ink)]">
+        <span class="hidden sm:inline">Audit History</span><span class="sm:hidden">History</span> (<span id="history-count">0</span>)
       </button>
     </nav>
 
     <!-- Theme & Quick Action Controls -->
-    <div class="flex items-center space-x-4">
-      <button onclick="toggleTheme()" class="w-9 h-9 rounded-full border border-[var(--line-strong)] flex items-center justify-center text-[var(--ink)] hover:bg-[var(--surface-card)] transition" title="Toggle Theme">
+    <div class="flex items-center space-x-2 sm:space-x-4">
+      <button onclick="toggleTheme()" class="w-8 h-8 sm:w-9 sm:h-9 rounded-full border border-[var(--line-strong)] flex items-center justify-center text-[var(--ink)] hover:bg-[var(--surface-card)] transition shrink-0" title="Toggle Theme">
         <i data-lucide="moon" id="theme-icon" class="w-4 h-4"></i>
       </button>
-      <button onclick="switchView('workspace')" class="btn-metic-primary !py-2 !px-5 text-xs">
+      <button onclick="switchView('workspace')" class="btn-metic-primary !py-1.5 sm:!py-2 !px-3 sm:!px-5 text-xs hidden md:inline-flex">
         <span>Start Audit</span>
         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"></path></svg>
       </button>
@@ -81,33 +81,33 @@
   </header>
 
   <!-- MAIN CONTAINER -->
-  <main class="flex-1 w-full max-w-7xl mx-auto px-8 py-10 relative">
+  <main class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 relative">
 
     <!-- =========================================================================
          VIEW 1: EDITORIAL SHOWCASE WITH 3D LOUPE INSPECTOR
          ========================================================================= -->
-    <section id="view-landing" class="space-y-24 py-8">
+    <section id="view-landing" class="space-y-16 sm:space-y-24 py-4 sm:py-8">
       
       <!-- Editorial Hero Header -->
-      <div class="grid grid-cols-12 gap-8 items-center pt-8 pb-16 precision-border-b">
+      <div class="grid grid-cols-12 gap-6 sm:gap-8 items-center pt-4 sm:pt-8 pb-12 sm:pb-16 precision-border-b">
         
-        <div class="col-span-12 lg:col-span-7 space-y-6">
-          <div class="flex items-center space-x-3">
+        <div class="col-span-12 lg:col-span-7 space-y-4 sm:space-y-6">
+          <div class="flex items-center space-x-3 flex-wrap gap-y-1">
             <span class="measure-tag">01 / GROUNDED VERIFICATION</span>
-            <span class="h-px w-8 bg-[var(--line-strong)]"></span>
+            <span class="h-px w-8 bg-[var(--line-strong)] hidden sm:inline-block"></span>
             <span class="measure-tag">NO HALLUCINATIONS</span>
           </div>
 
-          <h1 class="hero-title editorial-title text-6xl md:text-8xl leading-[0.95] text-[var(--ink)]" data-scan="Hero Promise Headline">
+          <h1 class="hero-title editorial-title text-4xl sm:text-6xl md:text-8xl leading-[1.02] sm:leading-[0.95] text-[var(--ink)]" data-scan="Hero Promise Headline">
             Take a closer look<br>
             <span class="italic text-[var(--ink-secondary)]">at your ad promises.</span>
           </h1>
 
-          <p class="text-lg md:text-xl text-[var(--ink-secondary)] max-w-xl font-normal leading-relaxed pt-2" data-scan="Grounding Verification Principle">
+          <p class="text-base sm:text-lg md:text-xl text-[var(--ink-secondary)] max-w-xl font-normal leading-relaxed pt-1 sm:pt-2" data-scan="Grounding Verification Principle">
             An advertisement promises a 30-day trial; the landing page only offers seven. Build an auditor that proves every finding using verified, immutable source text.
           </p>
 
-          <div class="pt-4 flex items-center space-x-4">
+          <div class="pt-2 sm:pt-4 flex flex-wrap items-center gap-3">
             <button onclick="switchView('workspace')" class="btn-metic-primary" data-scan="Audit Studio Launcher CTA">
               <span>Open Audit Studio</span>
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"></path></svg>
@@ -118,9 +118,11 @@
           </div>
         </div>
 
-        <!-- 3D Interactive Model Card Container -->
+        <!-- Right Column: Dual Model / Loupe Experience -->
         <div class="col-span-12 lg:col-span-5 flex flex-col items-center justify-center relative">
-          <div id="stage-placeholder" class="w-full relative h-[480px] rounded-3xl precision-border-l precision-border-r precision-border-t precision-border-b bg-[var(--surface-card)]/60 p-6 shadow-xl overflow-hidden flex flex-col justify-between" data-scan="Auditor Precision Loupe Station">
+          
+          <!-- DESKTOP / LAPTOP: 3D Loupe Interactive Docking Station -->
+          <div id="stage-placeholder" class="hidden lg:flex w-full relative h-[480px] rounded-3xl precision-border-l precision-border-r precision-border-t precision-border-b bg-[var(--surface-card)]/60 p-6 shadow-xl overflow-hidden flex-col justify-between" data-scan="Auditor Precision Loupe Station">
             <!-- Architectural Background Telemetry (Inverted in high-contrast x-ray when resting) -->
             <div class="flex items-center justify-between text-[11px] font-mono text-[var(--ink-secondary)]">
               <span class="font-semibold tracking-wider text-[var(--accent)]">● OPTICAL SPEC_03</span>
@@ -151,45 +153,104 @@
               <span>RELEASE TO RETURN</span>
             </div>
           </div>
+
+          <!-- MOBILE / TABLET: Dedicated Lightweight, Silky-Smooth 60fps Evidence Loupe Component -->
+          <div id="mobile-loupe-card" class="block lg:hidden w-full editorial-card rounded-2xl p-5 shadow-lg border border-[var(--line-strong)] space-y-4">
+            <div class="flex items-center justify-between text-[11px] font-mono border-b border-[var(--line-border)] pb-2.5">
+              <span class="font-bold tracking-wider text-[var(--accent)] flex items-center gap-1.5">
+                <span class="metic-dot"></span> OPTICAL SPEC_03 · MOBILE EVIDENCE LOUPE
+              </span>
+              <span class="px-2 py-0.5 rounded bg-[var(--line-border)] text-[var(--ink)] text-[10px]">60 FPS · TACTILE</span>
+            </div>
+
+            <!-- Mobile Interactive Loupe Viewport -->
+            <div class="relative bg-[var(--paper)] rounded-xl p-4 border border-[var(--line-border)] space-y-3">
+              <div class="flex items-center justify-between">
+                <span class="measure-tag text-[10px]">INSPECTED CLAIM</span>
+                <span id="mob-status-pill" class="status-pill status-contradicted text-[10px]">CONTRADICTED</span>
+              </div>
+              <div>
+                <h4 id="mob-claim-title" class="editorial-title text-xl text-[var(--ink)]">30-Day Free Trial</h4>
+                <p id="mob-claim-sub" class="text-xs text-[var(--ink-secondary)] mt-0.5">No credit card required. Full team access.</p>
+              </div>
+
+              <!-- Simulated X-Ray Evidence Crosshair Lens -->
+              <div class="p-3 rounded-lg border border-red-300 bg-red-50/70 dark:bg-red-950/30 text-xs font-mono space-y-1">
+                <div class="text-[10px] text-red-600 font-bold uppercase tracking-wider flex items-center gap-1">
+                  <i data-lucide="scan" class="w-3 h-3"></i>
+                  <span>X-RAY / VERIFIED PAGE EVIDENCE:</span>
+                </div>
+                <p id="mob-quote" class="text-red-900 dark:text-red-200 italic font-sans text-xs">“Start your 7-day trial. Credit card required for activation.”</p>
+                <div id="mob-zone" class="text-[10px] text-red-700 dark:text-red-300">📍 DOM: HERO_SECTION (h2.pricing-tier)</div>
+              </div>
+
+              <div class="text-[11px] text-[var(--ink-secondary)] border-t border-[var(--line-border)] pt-2 flex items-start gap-1.5">
+                <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-[var(--accent)] shrink-0 mt-0.5"></i>
+                <span id="mob-fix">Update ad to state “7-Day Trial” or honor advertised 30 days.</span>
+              </div>
+            </div>
+
+            <!-- Interactive Switcher Chips -->
+            <div>
+              <div class="text-[10px] font-mono text-[var(--ink-muted)] uppercase tracking-wider mb-2">Tap claim to inspect evidence:</div>
+              <div class="flex flex-wrap gap-1.5">
+                <button type="button" id="mob-chip-duration" onclick="selectMobileLoupeScenario('duration')" class="px-3 py-1 rounded-full text-[11px] font-mono border border-[var(--accent)] bg-[var(--surface-card)] text-[var(--accent)] font-bold shadow-sm transition cursor-pointer">
+                  Trial Duration
+                </button>
+                <button type="button" id="mob-chip-pricing" onclick="selectMobileLoupeScenario('pricing')" class="px-3 py-1 rounded-full text-[11px] font-mono border border-[var(--line-strong)] bg-[var(--paper)] text-[var(--ink-secondary)] transition cursor-pointer">
+                  Free Plan
+                </button>
+                <button type="button" id="mob-chip-discount" onclick="selectMobileLoupeScenario('discount')" class="px-3 py-1 rounded-full text-[11px] font-mono border border-[var(--line-strong)] bg-[var(--paper)] text-[var(--ink-secondary)] transition cursor-pointer">
+                  90% Discount
+                </button>
+              </div>
+            </div>
+
+            <button type="button" onclick="switchView('workspace')" class="btn-metic-primary w-full justify-center !py-2.5 text-xs">
+              <span>Launch New Campaign Audit</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"></path></svg>
+            </button>
+          </div>
+
         </div>
 
       </div>
 
       <!-- Architectural Methodology Grid (4 Metic Principles) -->
-      <section id="rules-section" class="space-y-8">
+      <section id="rules-section" class="space-y-6 sm:space-y-8">
         <div class="flex items-center justify-between pb-4 precision-border-b">
           <span class="measure-tag">02 / CORE METHODOLOGY</span>
           <span class="measure-tag">ARCHITECTURAL DISCIPLINE</span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
-          <div class="space-y-4 precision-border-r pr-6" data-scan="Methodology Rule 01: Grounding Quote Verification">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 sm:gap-8">
+          <div class="space-y-3 sm:space-y-4 precision-border-b pb-6 sm:precision-border-b-0 sm:precision-border-r sm:pr-6 sm:pb-0" data-scan="Methodology Rule 01: Grounding Quote Verification">
             <span class="font-mono text-xs text-[var(--accent)] font-bold">01. GROUNDING</span>
-            <h3 class="editorial-title text-3xl text-[var(--ink)]">Every quote exists.</h3>
+            <h3 class="editorial-title text-2xl sm:text-3xl text-[var(--ink)]">Every quote exists.</h3>
             <p class="text-xs text-[var(--ink-secondary)] leading-relaxed">
               Every finding must quote the exact page text. If the evidence quote cannot be verified in the DOM, it is strictly rejected.
             </p>
           </div>
 
-          <div class="space-y-4 precision-border-r pr-6" data-scan="Methodology Rule 02: Absence Separation (NOT_FOUND)">
+          <div class="space-y-3 sm:space-y-4 precision-border-b pb-6 sm:precision-border-b-0 sm:precision-border-r sm:pr-6 sm:pb-0" data-scan="Methodology Rule 02: Absence Separation (NOT_FOUND)">
             <span class="font-mono text-xs text-[var(--accent)] font-bold">02. ABSENCE ≠ LIE</span>
-            <h3 class="editorial-title text-3xl text-[var(--ink)]">Evidence gaps.</h3>
+            <h3 class="editorial-title text-2xl sm:text-3xl text-[var(--ink)]">Evidence gaps.</h3>
             <p class="text-xs text-[var(--ink-secondary)] leading-relaxed">
               Missing evidence is classified as <code class="bg-[var(--surface-card)] px-1 py-0.5 rounded text-[var(--ink)] font-mono text-[10px]">NOT_FOUND</code>, never as a contradiction. Absence is an evidence gap, not proven falsehood.
             </p>
           </div>
 
-          <div class="space-y-4 precision-border-r pr-6" data-scan="Methodology Rule 03: Heuristic DOM Hierarchy">
+          <div class="space-y-3 sm:space-y-4 precision-border-b pb-6 sm:precision-border-b-0 sm:precision-border-r sm:pr-6 sm:pb-0" data-scan="Methodology Rule 03: Heuristic DOM Hierarchy">
             <span class="font-mono text-xs text-[var(--accent)] font-bold">03. HIERARCHY</span>
-            <h3 class="editorial-title text-3xl text-[var(--ink)]">Heuristic DOM zones.</h3>
+            <h3 class="editorial-title text-2xl sm:text-3xl text-[var(--ink)]">Heuristic DOM zones.</h3>
             <p class="text-xs text-[var(--ink-secondary)] leading-relaxed">
               Preserves DOM order and headings. Distinguishes prominent Hero promises from buried disclaimers hidden in footer footnotes.
             </p>
           </div>
 
-          <div class="space-y-4" data-scan="Methodology Rule 04: Anti-Masking Critical Banner">
+          <div class="space-y-3 sm:space-y-4" data-scan="Methodology Rule 04: Anti-Masking Critical Banner">
             <span class="font-mono text-xs text-[var(--accent)] font-bold">04. ANTI-MASKING</span>
-            <h3 class="editorial-title text-3xl text-[var(--ink)]">Critical flags.</h3>
+            <h3 class="editorial-title text-2xl sm:text-3xl text-[var(--ink)]">Critical flags.</h3>
             <p class="text-xs text-[var(--ink-secondary)] leading-relaxed">
               High average scores never conceal material legal or pricing contradictions. Severe mismatches raise an unmissable red banner.
             </p>
@@ -269,8 +330,8 @@
         </div>
       </div>
 
-      <div class="editorial-card rounded-2xl p-8 precision-border-b">
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-10">
+      <div class="editorial-card rounded-2xl p-4 sm:p-6 lg:p-8 precision-border-b">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-10">
           <div class="space-y-5">
             <div class="flex items-center justify-between">
               <span class="measure-tag">SOURCE A · SEARCH AD</span>
@@ -287,7 +348,7 @@
               <textarea id="input-desc" rows="3" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl p-4 text-sm text-[var(--ink)] font-sans focus:outline-none focus:border-[var(--accent)] transition leading-relaxed">Start using our project management software today. No credit card required.</textarea>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)] mb-1.5">Call to Action (CTA)</label>
                 <input type="text" id="input-cta" placeholder="e.g. Start Free Trial" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl px-3.5 py-2 text-xs text-[var(--ink)] font-sans focus:outline-none focus:border-[var(--accent)] transition">
@@ -334,12 +395,12 @@
           </div>
         </div>
 
-        <div class="mt-8 pt-6 precision-border-t flex items-center justify-between">
+        <div class="mt-8 pt-6 precision-border-t flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <span class="text-xs font-mono text-[var(--ink-muted)]">
             DETERMINISTIC EVALUATION · TWO-TIER QUOTE VERIFICATION
           </span>
 
-          <button onclick="executeAudit()" id="btn-run-audit" class="btn-metic-primary">
+          <button onclick="executeAudit()" id="btn-run-audit" class="btn-metic-primary w-full sm:w-auto justify-center">
             <span>Verify Message Match</span>
             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"></path></svg>
           </button>
@@ -347,29 +408,29 @@
       </div>
 
       <!-- Critical Marketing Liability Alert Banner -->
-      <div id="liability-banner" class="hidden border border-red-400 bg-red-50 dark:bg-red-950/40 p-6 rounded-2xl text-red-900 dark:text-red-200 flex items-start space-x-4 shadow-sm">
-        <i data-lucide="alert-triangle" class="w-6 h-6 text-red-600 shrink-0 mt-0.5"></i>
+      <div id="liability-banner" class="hidden border border-red-400 bg-red-50 dark:bg-red-950/40 p-4 sm:p-6 rounded-2xl text-red-900 dark:text-red-200 flex items-start space-x-3 sm:space-x-4 shadow-sm">
+        <i data-lucide="alert-triangle" class="w-5 h-5 sm:w-6 sm:h-6 text-red-600 shrink-0 mt-0.5"></i>
         <div>
-          <h4 class="font-bold text-red-600 dark:text-red-400 font-mono text-sm uppercase tracking-wider">Critical Marketing Liability Flag</h4>
-          <p class="text-sm mt-1 leading-relaxed">
+          <h4 class="font-bold text-red-600 dark:text-red-400 font-mono text-xs sm:text-sm uppercase tracking-wider">Critical Marketing Liability Flag</h4>
+          <p class="text-xs sm:text-sm mt-1 leading-relaxed">
             One or more high-materiality claims (such as trial length, pricing, or payment friction) are explicitly contradicted by verified page evidence.
           </p>
         </div>
       </div>
 
       <!-- Incomplete Retrieval / Unreadable Landing Page Diagnostic Banner (P1 Trust) -->
-      <div id="unreadable-banner" class="hidden border border-amber-400 bg-amber-50 dark:bg-amber-950/40 p-6 rounded-2xl text-amber-900 dark:text-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
-        <div class="flex items-start space-x-4">
-          <i data-lucide="help-circle" class="w-6 h-6 text-amber-600 shrink-0 mt-0.5"></i>
+      <div id="unreadable-banner" class="hidden border border-amber-400 bg-amber-50 dark:bg-amber-950/40 p-4 sm:p-6 rounded-2xl text-amber-900 dark:text-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-start space-x-3 sm:space-x-4">
+          <i data-lucide="help-circle" class="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 shrink-0 mt-0.5"></i>
           <div>
-            <div class="flex items-center space-x-2">
+            <div class="flex items-center space-x-2 flex-wrap gap-y-1">
               <span class="status-pill status-partial">UNABLE TO ASSESS FULLY</span>
-              <h4 id="unreadable-title" class="font-bold text-amber-800 dark:text-amber-300 font-mono text-sm uppercase tracking-wider">Incomplete Retrieval / Single-Page App Detected</h4>
+              <h4 id="unreadable-title" class="font-bold text-amber-800 dark:text-amber-300 font-mono text-xs sm:text-sm uppercase tracking-wider">Incomplete Retrieval / Single-Page App Detected</h4>
             </div>
             <p id="unreadable-desc" class="text-xs mt-1.5 leading-relaxed text-amber-800/90 dark:text-amber-200/90 font-sans">
               The target website could not be fully assessed via static HTTP fetch. No text content was extracted or the destination site blocked cloud requests.
             </p>
-            <div id="unreadable-meta" class="mt-2 text-[11px] font-mono text-amber-700 dark:text-amber-400 space-x-3"></div>
+            <div id="unreadable-meta" class="mt-2 text-[10px] sm:text-[11px] font-mono text-amber-700 dark:text-amber-400 flex flex-wrap gap-2"></div>
           </div>
         </div>
         <button type="button" onclick="switchLandingInputTab('html'); document.getElementById('input-html').focus();" class="btn-metic-secondary !text-xs !py-2 shrink-0 self-start md:self-center flex items-center space-x-1.5">
@@ -379,33 +440,33 @@
       </div>
 
       <!-- Results Executive Summary & Findings -->
-      <div id="results-container" class="hidden space-y-8">
+      <div id="results-container" class="hidden space-y-6 sm:space-y-8">
         <!-- Re-Audit Diff / Drift Comparison Banner -->
         <div id="reaudit-diff-banner" class="hidden"></div>
 
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between">
-            <span class="measure-tag">MATCH SCORE</span>
-            <div class="text-5xl editorial-title text-[var(--ink)] my-3" id="res-score">--/100</div>
-            <span class="status-pill status-supported w-max" id="res-grade">Calculating...</span>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+          <div class="editorial-card p-4 sm:p-6 rounded-xl sm:rounded-2xl flex flex-col justify-between">
+            <span class="measure-tag text-[10px] sm:text-[11px]">MATCH SCORE</span>
+            <div class="text-3xl sm:text-5xl editorial-title text-[var(--ink)] my-2 sm:my-3" id="res-score">--/100</div>
+            <span class="status-pill status-supported w-max text-[10px] sm:text-xs" id="res-grade">Calculating...</span>
           </div>
 
-          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between">
-            <span class="measure-tag">EVIDENCE COVERAGE</span>
-            <div class="text-5xl editorial-title text-[var(--ink)] my-3" id="res-coverage">--%</div>
-            <span class="text-xs text-[var(--ink-muted)] font-mono">Assessed Claims Found</span>
+          <div class="editorial-card p-4 sm:p-6 rounded-xl sm:rounded-2xl flex flex-col justify-between">
+            <span class="measure-tag text-[10px] sm:text-[11px]">EVIDENCE COVERAGE</span>
+            <div class="text-3xl sm:text-5xl editorial-title text-[var(--ink)] my-2 sm:my-3" id="res-coverage">--%</div>
+            <span class="text-[10px] sm:text-xs text-[var(--ink-muted)] font-mono">Assessed Claims Found</span>
           </div>
 
-          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between">
-            <span class="measure-tag">EVIDENCE PROMINENCE</span>
-            <div class="text-5xl editorial-title text-[var(--ink)] my-3" id="res-prominence">--%</div>
-            <span class="text-xs text-[var(--ink-muted)] font-mono">Hero vs Footer Weight</span>
+          <div class="editorial-card p-4 sm:p-6 rounded-xl sm:rounded-2xl flex flex-col justify-between">
+            <span class="measure-tag text-[10px] sm:text-[11px]">EVIDENCE PROMINENCE</span>
+            <div class="text-3xl sm:text-5xl editorial-title text-[var(--ink)] my-2 sm:my-3" id="res-prominence">--%</div>
+            <span class="text-[10px] sm:text-xs text-[var(--ink-muted)] font-mono">Hero vs Footer Weight</span>
           </div>
 
-          <div class="editorial-card p-6 rounded-2xl flex flex-col justify-between">
-            <span class="measure-tag">QUOTE VALIDITY RATE</span>
-            <div class="text-5xl editorial-title text-emerald-600 my-3" id="res-validity">100%</div>
-            <span class="text-xs text-[var(--ink-muted)] font-mono">Zero Hallucinations</span>
+          <div class="editorial-card p-4 sm:p-6 rounded-xl sm:rounded-2xl flex flex-col justify-between">
+            <span class="measure-tag text-[10px] sm:text-[11px]">QUOTE VALIDITY RATE</span>
+            <div class="text-3xl sm:text-5xl editorial-title text-emerald-600 my-2 sm:my-3" id="res-validity">100%</div>
+            <span class="text-[10px] sm:text-xs text-[var(--ink-muted)] font-mono">Zero Hallucinations</span>
           </div>
         </div>
 

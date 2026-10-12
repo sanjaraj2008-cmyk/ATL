@@ -273,6 +273,17 @@ body {
     top: 27%;
     font-size: 17px;
   }
+}
+
+/* On mobile screens, disable 3D stage and backdrop-filter lens to eliminate lag */
+@media (max-width: 768px) {
+  #stage,
+  .xray-lens,
+  .scan-status {
+    display: none !important;
+  }
+}
+
 /* =========================================================================
    METIC.STUDIO EXACT X-RAY LENS ENGINE (from metic-3d-magnifying-glass (1).html)
    ========================================================================= */
