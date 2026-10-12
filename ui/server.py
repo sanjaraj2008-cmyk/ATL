@@ -67,13 +67,14 @@ app.add_middleware(
 engine = AuditEngine()
 
 class AuditRequest(BaseModel):
-    ad_headline: str
-    ad_description: str
+    ad_headline: Optional[str] = ""
+    ad_description: Optional[str] = ""
     landing_page_html: Optional[str] = None
     landing_page_url: Optional[str] = None
     ad_call_to_action: Optional[str] = None
     snapshot_source_url: Optional[str] = None
     snapshot_hash: Optional[str] = None
+    campaign_name: Optional[str] = None
 
 class FetchURLRequest(BaseModel):
     url: str
@@ -104,15 +105,15 @@ def run_audit(req: AuditRequest):
 
         if req.landing_page_url and not req.landing_page_html:
             result = engine.audit_url(
-                ad_headline=req.ad_headline,
-                ad_description=req.ad_description,
+                ad_headline=req.ad_headline or "",
+                ad_description=req.ad_description or "",
                 landing_page_url=req.landing_page_url,
                 ad_call_to_action=req.ad_call_to_action
             )
         else:
             result = engine.audit(
-                ad_headline=req.ad_headline,
-                ad_description=req.ad_description,
+                ad_headline=req.ad_headline or "",
+                ad_description=req.ad_description or "",
                 landing_page_html=req.landing_page_html or "",
                 ad_call_to_action=req.ad_call_to_action,
                 snapshot_id=req.snapshot_hash

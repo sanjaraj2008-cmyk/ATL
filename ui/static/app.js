@@ -959,9 +959,13 @@ function loadPreset(idx) {
   if (idx === "") return;
   const item = presetsList[idx];
   if (item) {
-    document.getElementById('input-headline').value = item.ad_headline;
-    document.getElementById('input-desc').value = item.ad_description;
-    document.getElementById('input-html').value = item.html;
+    document.getElementById('input-headline').value = item.ad_headline || '';
+    document.getElementById('input-desc').value = item.ad_description || '';
+    const inputCta = document.getElementById('input-cta');
+    if (inputCta) inputCta.value = item.ad_call_to_action || '';
+    const inputCampaign = document.getElementById('input-campaign');
+    if (inputCampaign) inputCampaign.value = item.campaign_name || item.title || '';
+    document.getElementById('input-html').value = item.html || '';
     if (item.html) {
       activeSnapshot = {
         sourceUrl: null,
@@ -1012,6 +1016,9 @@ async function executeAudit() {
   const campaignInput = document.getElementById('input-campaign');
   const campaign = campaignInput ? campaignInput.value.trim() : '';
   const html = document.getElementById('input-html').value.trim();
+  const targetUrl = activeLandingTab === 'url'
+    ? (document.getElementById('input-url') ? document.getElementById('input-url').value.trim() : '')
+    : (activeSnapshot.sourceUrl || '');
 
   const runBtn = document.getElementById('btn-run-audit');
   runBtn.disabled = true;
@@ -1020,11 +1027,23 @@ async function executeAudit() {
     <span class="font-mono text-xs">AUDITING DOM...</span>
   `;
 
+  // CTA and Campaign are strictly optional; headline or description is sufficient
+  if (!headline && !desc && !cta) {
+    alert("Please enter at least an ad headline or description to verify.");
+    runBtn.disabled = false;
+    runBtn.innerHTML = `
+      <span>Verify Message Match</span>
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 256 256"><path d="M204,64V168a12,12,0,0,1-24,0V93L72.49,200.49a12,12,0,0,1-17-17L163,76H88a12,12,0,0,1,0-24H192A12,12,0,0,1,204,64Z"></path></svg>
+    `;
+    return;
+  }
+
   const auditPayload = {
-    ad_headline: headline,
-    ad_description: desc
+    ad_headline: headline || '',
+    ad_description: desc || ''
   };
   if (cta) auditPayload.ad_call_to_action = cta;
+  if (campaign) auditPayload.campaign_name = campaign;
 
   if (activeLandingTab === 'url') {
     const liveUrl = document.getElementById('input-url').value.trim();
@@ -1104,7 +1123,9 @@ async function executeAudit() {
     currentAuditResult = data;
 
     // Check if there was a previous audit for this target URL to compute drift
-    const prevAudit = auditHistory.find(h => h.url && targetUrl && h.url.trim().toLowerCase() === targetUrl.trim().toLowerCase());
+    const prevAudit = targetUrl
+      ? auditHistory.find(h => h.url && h.url.trim().toLowerCase() === targetUrl.trim().toLowerCase())
+      : null;
     let diffInfo = null;
     if (prevAudit && prevAudit.score !== null && data.match_score !== null) {
       diffInfo = {
@@ -1119,10 +1140,10 @@ async function executeAudit() {
     const historyItem = {
       id: 'audit_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6),
       timestamp: new Date().toLocaleString(),
-      campaign: campaignName || 'General Campaign',
+      campaign: campaign || 'General Campaign',
       headline: headline,
-      description: description,
-      cta: cta,
+      description: desc,
+      cta: cta || '',
       url: targetUrl || activeSnapshot.sourceUrl || '',
       score: data.match_score,
       grade: data.grade,
