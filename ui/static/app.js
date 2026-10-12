@@ -985,29 +985,58 @@ function renderAuditResults(data) {
     }
 
     let evidenceHtml = '';
-    if (f.primary_evidence) {
+    if (f.primary_evidence && f.primary_evidence.quote) {
       const offsetsStr = (f.primary_evidence.source_start_offset !== null && f.primary_evidence.source_start_offset !== undefined) ? ` | Offsets: [${Number(f.primary_evidence.source_start_offset)}:${Number(f.primary_evidence.source_end_offset)}]` : '';
-      const selectorStr = f.primary_evidence.selector_path ? ` | Selector: <code>${escapeHTML(f.primary_evidence.selector_path)}</code>` : '';
+      const selectorStr = f.primary_evidence.selector_path ? ` | Selector: <code class="px-1 py-0.5 bg-black/5 dark:bg-white/10 rounded">${escapeHTML(f.primary_evidence.selector_path)}</code>` : '';
       const isVerified = Boolean(f.primary_evidence.is_verified);
-      const verificationBadge = isVerified ? `
-        <span class="font-bold text-[var(--accent)] flex items-center space-x-1.5">
-          <i data-lucide="check" class="w-3.5 h-3.5"></i>
-          <span>VERIFIED IN SOURCE DOM</span>
-        </span>
-      ` : `
-        <span class="font-bold text-amber-600 dark:text-amber-400 flex items-center space-x-1.5">
-          <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
-          <span>UNVERIFIED / HEURISTIC MATCH</span>
-        </span>
-      `;
+      const isContradicted = f.status === "CONTRADICTED";
+      
+      let verificationBadge = '';
+      let borderClass = '';
+
+      if (isContradicted) {
+        borderClass = 'border-l-rose-500 bg-rose-50/40 dark:bg-rose-950/20';
+        verificationBadge = `
+          <span class="font-bold text-rose-600 dark:text-rose-400 flex items-center space-x-1.5">
+            <i data-lucide="x-circle" class="w-3.5 h-3.5"></i>
+            <span>CONFLICTING EVIDENCE FOUND ON PAGE</span>
+          </span>
+        `;
+      } else if (isVerified) {
+        borderClass = 'border-l-emerald-600 dark:border-l-emerald-400 bg-emerald-50/30 dark:bg-emerald-950/20';
+        verificationBadge = `
+          <span class="font-bold text-emerald-700 dark:text-emerald-400 flex items-center space-x-1.5">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span>VERIFIED IN SOURCE DOM</span>
+          </span>
+        `;
+      } else {
+        borderClass = 'border-l-amber-500 bg-amber-50/30 dark:bg-amber-950/20';
+        verificationBadge = `
+          <span class="font-bold text-amber-700 dark:text-amber-400 flex items-center space-x-1.5">
+            <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+            <span>UNVERIFIED / HEURISTIC MATCH</span>
+          </span>
+        `;
+      }
 
       evidenceHtml = `
-        <div class="mt-4 p-4 rounded-xl bg-[var(--paper)] precision-border-l ${isVerified ? 'border-l-[var(--accent)]' : 'border-l-amber-500'} border border-[var(--line-border)]">
+        <div class="mt-4 p-4 rounded-xl precision-border-l ${borderClass} border border-[var(--line-border)]">
           <div class="flex flex-wrap items-center justify-between text-xs font-mono text-[var(--ink-secondary)] mb-1.5">
             ${verificationBadge}
             <span>ZONE: <b class="text-[var(--ink)]">${escapeHTML(f.primary_evidence.dom_zone)}</b> (&lt;${escapeHTML(f.primary_evidence.tag_name)}&gt;, Block ${escapeHTML(f.primary_evidence.block_id)}${selectorStr})${offsetsStr}</span>
           </div>
           <p class="font-mono text-sm text-[var(--ink)] italic pl-1">"${escapeHTML(f.primary_evidence.quote)}"</p>
+        </div>
+      `;
+    } else {
+      evidenceHtml = `
+        <div class="mt-4 p-3.5 rounded-xl border border-[var(--line-border)] bg-[var(--paper-subtle)] text-xs font-mono text-[var(--ink-muted)] flex items-center justify-between">
+          <span class="flex items-center space-x-1.5">
+            <i data-lucide="minus-circle" class="w-3.5 h-3.5 text-[var(--ink-muted)]"></i>
+            <span>NO DIRECT EVIDENCE FOUND IN EXTRACTED PAGE TEXT</span>
+          </span>
+          <span class="text-[10px]">Zero page matches for this claim</span>
         </div>
       `;
     }
