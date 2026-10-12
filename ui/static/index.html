@@ -37,11 +37,12 @@
   <div class="xray-lens" id="xrayLens" aria-hidden="true"></div>
   <div class="scan-status" id="scanStatus"><strong>●</strong> SCANNING <span id="scanTarget">page surface</span></div>
 
-  <!-- 3D Magnifying Glass Stage (Moves everywhere across full screen on double-click) -->
+  <!-- 3D Magnifying Glass Stage (Moves everywhere across full screen on double-click / long-press) -->
   <div id="stage" class="cursor-grab active:cursor-grabbing">
     <canvas id="scene" aria-label="Interactive 3D magnifying glass"></canvas>
     <div class="lens-copy" id="lensCopy">Pick<br>me up.<div class="lens-dot"></div><div class="lens-arrow">↘</div></div>
-    <div class="hint">Double-click to pick up · drag anywhere · release to return</div>
+    <div class="hint hidden sm:block">Double-click to inspect · drag anywhere · release to return</div>
+    <div class="hint block sm:hidden">Long press to inspect · drag anywhere · release to return</div>
   </div>
 
   <!-- FIXED NAVIGATION (METIC STYLE) -->
@@ -121,15 +122,15 @@
         <!-- Right Column: Dual Model / Loupe Experience -->
         <div class="col-span-12 lg:col-span-5 flex flex-col items-center justify-center relative">
           
-          <!-- DESKTOP / LAPTOP: 3D Loupe Interactive Docking Station -->
-          <div id="stage-placeholder" class="hidden lg:flex w-full relative h-[480px] rounded-3xl precision-border-l precision-border-r precision-border-t precision-border-b bg-[var(--surface-card)]/60 p-6 shadow-xl overflow-hidden flex-col justify-between" data-scan="Auditor Precision Loupe Station">
-            <!-- Architectural Background Telemetry (Inverted in high-contrast x-ray when resting) -->
+          <!-- DESKTOP / LAPTOP / MOBILE: 3D Loupe Interactive Docking Station -->
+          <div id="stage-placeholder" class="w-full relative h-[360px] sm:h-[420px] lg:h-[480px] rounded-2xl sm:rounded-3xl precision-border-l precision-border-r precision-border-t precision-border-b bg-[var(--surface-card)]/60 p-4 sm:p-6 shadow-xl overflow-hidden flex flex-col justify-between" data-scan="Auditor Precision Loupe Station">
+            <!-- Architectural Background Telemetry (Inverted in high-contrast x-ray when active) -->
             <div class="flex items-center justify-between text-[11px] font-mono text-[var(--ink-secondary)]">
               <span class="font-semibold tracking-wider text-[var(--accent)]">● OPTICAL SPEC_03</span>
-              <span class="px-2 py-0.5 rounded bg-[var(--line-border)] text-[var(--ink)]">REST HOME · 24FPS</span>
+              <span class="px-2 py-0.5 rounded bg-[var(--line-border)] text-[var(--ink)]">REST HOME · STANDBY</span>
             </div>
 
-            <div class="space-y-3 font-mono text-xs text-[var(--ink-secondary)] max-w-xs">
+            <div class="space-y-2 sm:space-y-3 font-mono text-xs text-[var(--ink-secondary)] max-w-xs">
               <div class="flex justify-between border-b border-[var(--line-border)] pb-1.5">
                 <span>INSPECTOR</span>
                 <span class="text-[var(--ink)] font-bold">X-RAY BLUEPRINT</span>
@@ -144,18 +145,19 @@
               </div>
               <div class="flex justify-between">
                 <span>INTERACTION</span>
-                <span class="text-[var(--accent)] font-semibold">DOUBLE-CLICK TO PICK UP</span>
+                <span class="text-[var(--accent)] font-semibold hidden sm:inline">DOUBLE-CLICK TO PICK UP</span>
+                <span class="text-[var(--accent)] font-semibold sm:hidden">LONG PRESS TO PICK UP</span>
               </div>
             </div>
 
-            <div class="text-[10px] font-mono text-[var(--ink-muted)] flex justify-between items-center border-t border-[var(--line-border)] pt-3">
+            <div class="text-[10px] font-mono text-[var(--ink-muted)] flex justify-between items-center border-t border-[var(--line-border)] pt-2.5 sm:pt-3">
               <span>DRAG ANYWHERE ACROSS SITE</span>
               <span>RELEASE TO RETURN</span>
             </div>
           </div>
 
           <!-- MOBILE / TABLET: Dedicated Lightweight, Silky-Smooth 60fps Evidence Loupe Component -->
-          <div id="mobile-loupe-card" class="block lg:hidden w-full editorial-card rounded-2xl p-5 shadow-lg border border-[var(--line-strong)] space-y-4">
+          <div id="mobile-loupe-card" class="block lg:hidden w-full mt-4 editorial-card rounded-2xl p-5 shadow-lg border border-[var(--line-strong)] space-y-4">
             <div class="flex items-center justify-between text-[11px] font-mono border-b border-[var(--line-border)] pb-2.5">
               <span class="font-bold tracking-wider text-[var(--accent)] flex items-center gap-1.5">
                 <span class="metic-dot"></span> OPTICAL SPEC_03 · MOBILE EVIDENCE LOUPE

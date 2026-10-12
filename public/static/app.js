@@ -67,27 +67,27 @@ function initMetic3DMagnifyingGlass() {
   const scanTarget = document.querySelector('#scanTarget');
   if (!stage || !canvas) return;
 
-  // Mobile Performance Guardrail:
-  // On mobile screens (<768px), disable heavy WebGL 3D render loops and high-overhead backdrop-filter
-  // to completely eliminate lagging, battery drain, and touch event conflicts.
-  if (window.innerWidth < 768) {
-    if (stage) stage.style.display = 'none';
-    if (xrayLens) xrayLens.style.display = 'none';
-    if (scanStatus) scanStatus.style.display = 'none';
-    return;
-  }
-
+  const isMobile = window.innerWidth < 768;
   const width = stage.clientWidth || 480;
   const height = stage.clientHeight || 480;
 
   // WebGL Renderer with Alpha enabled to blend seamlessly with theme
-  renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer = new THREE.WebGLRenderer({
+    canvas: canvas,
+    antialias: !isMobile, // Disable MSAA on mobile for silky smooth 60fps
+    alpha: true,
+    powerPreference: 'high-performance'
+  });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, isMobile ? 1.5 : 2));
   renderer.setSize(width, height, false);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
-  renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  if (!isMobile) {
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  } else {
+    renderer.shadowMap.enabled = false;
+  }
 
   // Scene & Camera
   scene = new THREE.Scene();
@@ -99,9 +99,11 @@ function initMetic3DMagnifyingGlass() {
 
   const keyLight = new THREE.DirectionalLight(0xffffff, 3.2);
   keyLight.position.set(-3.5, 5, 7);
-  keyLight.castShadow = true;
-  keyLight.shadow.mapSize.set(2048, 2048);
-  keyLight.shadow.bias = -0.0002;
+  if (!isMobile) {
+    keyLight.castShadow = true;
+    keyLight.shadow.mapSize.set(1024, 1024);
+    keyLight.shadow.bias = -0.0002;
+  }
   scene.add(keyLight);
 
   const fillLight = new THREE.DirectionalLight(0xffffff, 1.25);
@@ -118,7 +120,9 @@ function initMetic3DMagnifyingGlass() {
     new THREE.ShadowMaterial({ opacity: 0.16 })
   );
   ground.position.set(0, 0, -0.8);
-  ground.receiveShadow = true;
+  if (!isMobile) {
+    ground.receiveShadow = true;
+  }
   scene.add(ground);
 
   // 3D Assembly Rigs
@@ -159,10 +163,13 @@ function initMetic3DMagnifyingGlass() {
   });
 
   function torus(parent, radius, tube, material, z = 0, segments = 160) {
-    const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 16, segments), material);
+    const segs = isMobile ? 64 : segments;
+    const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 16, segs), material);
     mesh.position.z = z;
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    if (!isMobile) {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+    }
     parent.add(mesh);
     return mesh;
   }
@@ -222,13 +229,15 @@ function initMetic3DMagnifyingGlass() {
     const A = new THREE.Vector3(...start), B = new THREE.Vector3(...end);
     const direction = new THREE.Vector3().subVectors(B, A);
     const mesh = new THREE.Mesh(
-      new THREE.CylinderGeometry(rTop, rBottom, direction.length(), radial, 1, false),
+      new THREE.CylinderGeometry(rTop, rBottom, direction.length(), isMobile ? 24 : radial, 1, false),
       material
     );
     mesh.position.copy(A).add(B).multiplyScalar(0.5);
     mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
-    mesh.castShadow = true;
-    mesh.receiveShadow = true;
+    if (!isMobile) {
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+    }
     parent.add(mesh);
     return mesh;
   }
@@ -282,11 +291,13 @@ function initMetic3DMagnifyingGlass() {
     };
   }
 
-  // Position stage over placeholder and align resting X-ray lens
+  // Position stage over placeholder and align resting state (X-ray lens deactivated)
   function dockStageToPlaceholder() {
     const placeholder = document.getElementById('stage-placeholder');
     if (!placeholder || !stage) return;
     const r = placeholder.getBoundingClientRect();
+    if (r.width === 0 || r.height === 0) return;
+
     stage.style.position = 'absolute';
     stage.style.left = `${r.left + window.scrollX}px`;
     stage.style.top = `${r.top + window.scrollY}px`;
@@ -296,11 +307,19 @@ function initMetic3DMagnifyingGlass() {
     stage.style.pointerEvents = 'auto';
     stage.style.cursor = 'grab';
 
+    // When resting / docked, X-Ray vision effect MUST BE DEACTIVATED
     if (xrayLens && !isPickedUp && !isReturning) {
       const home = getHomeScreenCoords();
       xrayLens.style.left = `${home.x}px`;
       xrayLens.style.top = `${home.y}px`;
-      xrayLens.style.opacity = '1';
+      xrayLens.classList.remove('active');
+      xrayLens.style.opacity = '0';
+      xrayLens.style.visibility = 'hidden';
+    }
+    if (scanStatus && !isPickedUp && !isReturning) {
+      scanStatus.classList.remove('active');
+      scanStatus.style.opacity = '0';
+      scanStatus.style.visibility = 'hidden';
     }
 
     onResize();
@@ -312,16 +331,24 @@ function initMetic3DMagnifyingGlass() {
     if (!isPickedUp && !isReturning) {
       dockStageToPlaceholder();
     }
-  });
+  }, { passive: true });
 
   // Updates the 3D loupe position and X-ray blueprint lens synchronously
   function updateLoupe(clientX, clientY) {
     if (!xrayLens) return;
 
-    // 1. Position the high-contrast X-ray lens exactly under cursor
+    // 1. Position the high-contrast X-ray lens exactly under cursor/finger
     xrayLens.style.left = `${clientX}px`;
     xrayLens.style.top = `${clientY}px`;
+    xrayLens.classList.add('active');
+    xrayLens.style.visibility = 'visible';
     xrayLens.style.opacity = '1';
+
+    if (scanStatus) {
+      scanStatus.classList.add('active');
+      scanStatus.style.visibility = 'visible';
+      scanStatus.style.opacity = '1';
+    }
 
     // 2. Position 3D rig so the loupe head aligns with (clientX, clientY)
     const w = window.innerWidth;
@@ -359,14 +386,14 @@ function initMetic3DMagnifyingGlass() {
     }
   }
 
-  // Double-click or double-tap triggers pickup across the whole website
-  function triggerPickup(e) {
+  // Activates X-Ray vision effect and picks up the magnifying glass
+  function triggerPickup(clientX, clientY) {
     if (isReturning) return;
     isPickedUp = true;
     isDragging = true;
     isReturning = false;
-    lastPointerX = e.clientX;
-    lastPointerY = e.clientY;
+    lastPointerX = clientX;
+    lastPointerY = clientY;
 
     if (lensCopy) {
       lensCopy.style.opacity = '0';
@@ -383,91 +410,198 @@ function initMetic3DMagnifyingGlass() {
     stage.style.pointerEvents = 'none';
     stage.style.cursor = 'grabbing';
 
+    // ACTIVATE X-Ray vision
+    if (xrayLens) {
+      xrayLens.classList.add('active');
+      xrayLens.style.visibility = 'visible';
+      xrayLens.style.opacity = '1';
+    }
+    if (scanStatus) {
+      scanStatus.classList.add('active');
+      scanStatus.style.visibility = 'visible';
+      scanStatus.style.opacity = '1';
+    }
+
     onResize();
-    updateLoupe(e.clientX, e.clientY);
+    updateLoupe(clientX, clientY);
   }
 
-  // Double-click listener on stage
+  // Deactivates X-Ray vision effect immediately and initiates smooth return
+  function deactivateAndReturn() {
+    if (!isPickedUp && !isDragging) return;
+    isDragging = false;
+    isReturning = true;
+
+    // Immediately DEACTIVATE X-Ray vision effect on release
+    if (xrayLens) {
+      xrayLens.classList.remove('active');
+      xrayLens.style.opacity = '0';
+      xrayLens.style.visibility = 'hidden';
+    }
+    if (scanStatus) {
+      scanStatus.classList.remove('active');
+      scanStatus.style.opacity = '0';
+      scanStatus.style.visibility = 'hidden';
+    }
+    document.querySelectorAll('.scan-hit').forEach(el => el.classList.remove('scan-hit'));
+    if (scanTarget) scanTarget.textContent = 'page surface';
+  }
+
+  let longPressTimer = null;
+  let touchStartPos = { x: 0, y: 0 };
+  let isTouching = false;
+
+  // 1. DESKTOP: Double-click on stage
   stage.addEventListener('dblclick', (e) => {
     e.preventDefault();
-    triggerPickup(e);
+    triggerPickup(e.clientX, e.clientY);
   });
 
-  // Touch double-tap detection for trackpads/mobile
+  // 2. DESKTOP: Rapid double pointer-down (mouse / stylus)
   stage.addEventListener('pointerdown', (e) => {
-    const now = Date.now();
-    if (now - lastTapTime < 350) {
-      triggerPickup(e);
+    if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
+      const now = Date.now();
+      if (now - lastTapTime < 350) {
+        triggerPickup(e.clientX, e.clientY);
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
+      }
     }
-    lastTapTime = now;
   });
 
-  // Clicking "Pick me up" prompt directly activates pickup
-  if (lensCopy) {
-    lensCopy.style.pointerEvents = 'auto';
-    lensCopy.style.cursor = 'grab';
-    lensCopy.addEventListener('click', (e) => {
-      e.stopPropagation();
-      triggerPickup(e);
-    });
-  }
+  // 3. MOBILE: Long-press on magnifying glass (~420ms hold)
+  stage.addEventListener('touchstart', (e) => {
+    if (isPickedUp || isReturning) return;
+    if (e.touches && e.touches.length === 1) {
+      isTouching = true;
+      const t = e.touches[0];
+      touchStartPos = { x: t.clientX, y: t.clientY };
 
-  // Pointer move: tracks drag when picked up across the ENTIRE website
-  window.addEventListener('pointermove', (e) => {
+      if (longPressTimer) clearTimeout(longPressTimer);
+      longPressTimer = setTimeout(() => {
+        if (isTouching && !isPickedUp) {
+          if (navigator.vibrate) {
+            try { navigator.vibrate(50); } catch (_) {}
+          }
+          triggerPickup(touchStartPos.x, touchStartPos.y);
+        }
+        longPressTimer = null;
+      }, 420);
+    }
+  }, { passive: true });
+
+  window.addEventListener('touchmove', (e) => {
+    if (e.touches && e.touches.length > 0) {
+      const t = e.touches[0];
+      // If finger moved > 10px before long-press timer finished, user is scrolling: cancel long press
+      if (longPressTimer) {
+        const dist = Math.hypot(t.clientX - touchStartPos.x, t.clientY - touchStartPos.y);
+        if (dist > 10) {
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+      }
+
+      // If loupe is picked up and dragging: prevent page scrolling and track loupe
+      if (isPickedUp && isDragging) {
+        if (e.cancelable) e.preventDefault();
+        handlePointerMove(t.clientX, t.clientY);
+      }
+    }
+  }, { passive: false });
+
+  window.addEventListener('touchend', () => {
+    isTouching = false;
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
     if (isPickedUp && isDragging) {
-      updateLoupe(e.clientX, e.clientY);
+      deactivateAndReturn();
+    }
+  });
 
-      const deltaX = e.clientX - lastPointerX;
-      const deltaY = e.clientY - lastPointerY;
+  window.addEventListener('touchcancel', () => {
+    isTouching = false;
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
+    }
+    if (isPickedUp && isDragging) {
+      deactivateAndReturn();
+    }
+  });
+
+  // Universal move handler for active dragging and resting parallax
+  function handlePointerMove(clientX, clientY) {
+    if (isPickedUp && isDragging) {
+      updateLoupe(clientX, clientY);
+
+      const deltaX = clientX - lastPointerX;
+      const deltaY = clientY - lastPointerY;
       targetTiltY = THREE.MathUtils.clamp(deltaX * 0.012, -0.35, 0.35);
       targetTiltX = THREE.MathUtils.clamp(deltaY * 0.012, -0.35, 0.35);
 
-      lastPointerX = e.clientX;
-      lastPointerY = e.clientY;
-    } else if (!isPickedUp && !isReturning) {
+      lastPointerX = clientX;
+      lastPointerY = clientY;
+    } else if (!isPickedUp && !isReturning && stage) {
       const r = stage.getBoundingClientRect();
-      pointerX = ((e.clientX - r.left) / r.width - 0.5) * 2;
-      pointerY = ((e.clientY - r.top) / r.height - 0.5) * 2;
+      if (r.width > 0 && r.height > 0) {
+        pointerX = ((clientX - r.left) / r.width - 0.5) * 2;
+        pointerY = ((clientY - r.top) / r.height - 0.5) * 2;
+      }
+    }
+  }
+
+  window.addEventListener('pointermove', (e) => {
+    if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
+      handlePointerMove(e.clientX, e.clientY);
     }
   });
 
-  // Release mouse anywhere on the screen: springs smoothly back to original position
-  window.addEventListener('pointerup', () => {
-    if (isPickedUp && isDragging) {
-      isDragging = false;
-      isReturning = true;
-      document.querySelectorAll('.scan-hit').forEach(el => el.classList.remove('scan-hit'));
-      if (scanTarget) scanTarget.textContent = 'page surface';
+  // Desktop release: pointerup anywhere on screen deactivates X-ray and returns
+  window.addEventListener('pointerup', (e) => {
+    if (e.pointerType === 'mouse' || e.pointerType === 'pen') {
+      if (isPickedUp && isDragging) {
+        deactivateAndReturn();
+      }
     }
   });
 
   // Render loop with idle physics and spring return
   const clock = new THREE.Clock();
+  let frameCount = 0;
   function animate() {
     requestAnimationFrame(animate);
+    frameCount++;
+
+    // Mobile thermal & battery optimization:
+    // When resting idle on mobile, render at 30fps to keep device cool and eliminate lag
+    if (isMobile && !isPickedUp && !isReturning && (frameCount % 2 !== 0)) {
+      return;
+    }
+
     const t = clock.getElapsedTime();
 
     if (isReturning) {
       // Elastic spring physics back to home position
-      rig.position.x += (homePos.x - rig.position.x) * 0.14;
-      rig.position.y += (homePos.y - rig.position.y) * 0.14;
-      rig.position.z += (homePos.z - rig.position.z) * 0.14;
+      rig.position.x += (homePos.x - rig.position.x) * 0.16;
+      rig.position.y += (homePos.y - rig.position.y) * 0.16;
+      rig.position.z += (homePos.z - rig.position.z) * 0.16;
 
-      rig.rotation.x += (homeRot.x - rig.rotation.x) * 0.14;
-      rig.rotation.y += (homeRot.y - rig.rotation.y) * 0.14;
-      rig.rotation.z += (homeRot.z - rig.rotation.z) * 0.14;
+      rig.rotation.x += (homeRot.x - rig.rotation.x) * 0.16;
+      rig.rotation.y += (homeRot.y - rig.rotation.y) * 0.16;
+      rig.rotation.z += (homeRot.z - rig.rotation.z) * 0.16;
 
-      // X-ray lens simultaneously glides back smoothly to home screen coords
+      // X-ray lens simultaneously stays deactivated during glide back
       if (xrayLens) {
         const home = getHomeScreenCoords();
-        const currentLensX = parseFloat(xrayLens.style.left) || home.x;
-        const currentLensY = parseFloat(xrayLens.style.top) || home.y;
-
-        const nextLensX = currentLensX + (home.x - currentLensX) * 0.14;
-        const nextLensY = currentLensY + (home.y - currentLensY) * 0.14;
-
-        xrayLens.style.left = `${nextLensX}px`;
-        xrayLens.style.top = `${nextLensY}px`;
+        xrayLens.style.left = `${home.x}px`;
+        xrayLens.style.top = `${home.y}px`;
+        xrayLens.classList.remove('active');
+        xrayLens.style.opacity = '0';
+        xrayLens.style.visibility = 'hidden';
       }
 
       const d = Math.abs(rig.position.x - homePos.x) + Math.abs(rig.position.y - homePos.y) + Math.abs(rig.position.z - homePos.z);
@@ -478,6 +612,9 @@ function initMetic3DMagnifyingGlass() {
           const home = getHomeScreenCoords();
           xrayLens.style.left = `${home.x}px`;
           xrayLens.style.top = `${home.y}px`;
+          xrayLens.classList.remove('active');
+          xrayLens.style.opacity = '0';
+          xrayLens.style.visibility = 'hidden';
         }
 
         isReturning = false;
@@ -507,8 +644,9 @@ function initMetic3DMagnifyingGlass() {
 
   // Resize handler
   function onResize() {
-    const w = stage.clientWidth;
-    const h = stage.clientHeight;
+    if (!stage || !renderer || !camera) return;
+    const w = stage.clientWidth || window.innerWidth;
+    const h = stage.clientHeight || window.innerHeight;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
     camera.updateProjectionMatrix();
@@ -520,17 +658,7 @@ function initMetic3DMagnifyingGlass() {
     }
   }
   window.addEventListener('resize', () => {
-    if (window.innerWidth < 768) {
-      if (stage) stage.style.display = 'none';
-      if (xrayLens) xrayLens.style.display = 'none';
-      if (scanStatus) scanStatus.style.display = 'none';
-      return;
-    } else {
-      if (stage) stage.style.display = '';
-      if (xrayLens) xrayLens.style.display = '';
-      if (scanStatus) scanStatus.style.display = '';
-    }
-    if (!isPickedUp) dockStageToPlaceholder();
+    if (!isPickedUp && !isReturning) dockStageToPlaceholder();
     else onResize();
   });
   onResize();
@@ -657,12 +785,16 @@ function switchView(viewName) {
   if (viewName === 'landing') {
     document.getElementById('view-landing').classList.remove('hidden');
     btnLanding.className = activeClass;
+    if (stage) stage.style.display = '';
+    setTimeout(dockStageToPlaceholder, 60);
   } else if (viewName === 'workspace') {
     document.getElementById('view-workspace').classList.remove('hidden');
     btnWorkspace.className = activeClass;
+    if (stage && !isPickedUp) stage.style.display = 'none';
   } else if (viewName === 'history') {
     document.getElementById('view-history').classList.remove('hidden');
     btnHistory.className = activeClass;
+    if (stage && !isPickedUp) stage.style.display = 'none';
     renderHistory();
   }
 

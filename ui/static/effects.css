@@ -275,15 +275,6 @@ body {
   }
 }
 
-/* On mobile screens, disable 3D stage and backdrop-filter lens to eliminate lag */
-@media (max-width: 768px) {
-  #stage,
-  .xray-lens,
-  .scan-status {
-    display: none !important;
-  }
-}
-
 /* =========================================================================
    METIC.STUDIO EXACT X-RAY LENS ENGINE (from metic-3d-magnifying-glass (1).html)
    ========================================================================= */
@@ -291,7 +282,7 @@ body {
 .xray-lens {
   position: fixed;
   z-index: 9980;
-  width: clamp(260px, 25vw, 360px);
+  width: clamp(240px, 25vw, 360px);
   aspect-ratio: 1;
   border-radius: 50%;
   left: 74.5%;
@@ -299,12 +290,27 @@ body {
   transform: translate(-50%, -50%);
   pointer-events: none;
   overflow: hidden;
-  opacity: 1;
+  opacity: 0;
+  visibility: hidden;
   backdrop-filter: invert(1) hue-rotate(145deg) saturate(2.0) contrast(1.6);
   -webkit-backdrop-filter: invert(1) hue-rotate(145deg) saturate(2.0) contrast(1.6);
   border: 1.5px solid rgba(255, 65, 72, 0.9);
   box-shadow: inset 0 0 0 7px rgba(255, 255, 255, 0.15), inset 0 0 35px rgba(255, 65, 72, 0.25), 0 0 25px rgba(255, 65, 72, 0.2);
-  transition: opacity 0.25s ease;
+  transition: opacity 0.2s cubic-bezier(0.16, 1, 0.3, 1), visibility 0.2s ease;
+  will-change: transform, left, top;
+}
+
+.xray-lens.active {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+@media (max-width: 768px) {
+  .xray-lens {
+    width: clamp(180px, 55vw, 260px);
+    backdrop-filter: invert(1) hue-rotate(145deg) saturate(1.8) contrast(1.3);
+    -webkit-backdrop-filter: invert(1) hue-rotate(145deg) saturate(1.8) contrast(1.3);
+  }
 }
 
 .xray-lens:before {
@@ -353,7 +359,23 @@ body {
   pointer-events: none;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  transition: opacity 0.2s ease;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.scan-status.active {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+@media (max-width: 768px) {
+  .scan-status {
+    right: 12px;
+    bottom: 16px;
+    font-size: 11px;
+    padding: 6px 12px;
+  }
 }
 
 [data-theme="dark"] .scan-status {
