@@ -58,13 +58,13 @@
     <!-- Center Navigation Pill -->
     <nav class="flex items-center bg-[var(--surface-card)] rounded-full border border-[var(--line-strong)] p-1 shadow-sm">
       <button onclick="switchView('landing')" id="nav-landing" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink)] bg-[var(--paper)] shadow-sm">
-        Chapter 01 · Editorial
+        Dashboard
       </button>
       <button onclick="switchView('workspace')" id="nav-workspace" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink-secondary)] hover:text-[var(--ink)]">
-        Chapter 02 · Studio
+        New Audit
       </button>
       <button onclick="switchView('history')" id="nav-history" class="px-5 py-1.5 rounded-full text-xs font-semibold tracking-wide transition text-[var(--ink-secondary)] hover:text-[var(--ink)]">
-        Archive (<span id="history-count">0</span>)
+        Audit History (<span id="history-count">0</span>)
       </button>
     </nav>
 
@@ -284,7 +284,18 @@
 
             <div>
               <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)] mb-1.5">Ad Description</label>
-              <textarea id="input-desc" rows="4" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl p-4 text-sm text-[var(--ink)] font-sans focus:outline-none focus:border-[var(--accent)] transition leading-relaxed">Start using our project management software today. No credit card required.</textarea>
+              <textarea id="input-desc" rows="3" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl p-4 text-sm text-[var(--ink)] font-sans focus:outline-none focus:border-[var(--accent)] transition leading-relaxed">Start using our project management software today. No credit card required.</textarea>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)] mb-1.5">Call to Action (CTA)</label>
+                <input type="text" id="input-cta" placeholder="e.g. Start Free Trial" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl px-3.5 py-2 text-xs text-[var(--ink)] font-sans focus:outline-none focus:border-[var(--accent)] transition">
+              </div>
+              <div>
+                <label class="block text-xs font-mono font-semibold uppercase tracking-wider text-[var(--ink-secondary)] mb-1.5">Campaign Name (Optional)</label>
+                <input type="text" id="input-campaign" placeholder="e.g. Q4 Google Search" class="w-full bg-[var(--paper)] border border-[var(--line-strong)] rounded-xl px-3.5 py-2 text-xs text-[var(--ink)] font-sans focus:outline-none focus:border-[var(--accent)] transition">
+              </div>
             </div>
           </div>
 

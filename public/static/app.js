@@ -782,6 +782,10 @@ function handleFileUpload(event) {
 async function executeAudit() {
   const headline = document.getElementById('input-headline').value.trim();
   const desc = document.getElementById('input-desc').value.trim();
+  const ctaInput = document.getElementById('input-cta');
+  const cta = ctaInput ? ctaInput.value.trim() : '';
+  const campaignInput = document.getElementById('input-campaign');
+  const campaign = campaignInput ? campaignInput.value.trim() : '';
   const html = document.getElementById('input-html').value.trim();
 
   const runBtn = document.getElementById('btn-run-audit');
@@ -795,6 +799,7 @@ async function executeAudit() {
     ad_headline: headline,
     ad_description: desc
   };
+  if (cta) auditPayload.ad_call_to_action = cta;
 
   if (activeLandingTab === 'url') {
     const liveUrl = document.getElementById('input-url').value.trim();
