@@ -120,32 +120,39 @@ class URLFetcher:
         timeout_tuple = (5, min(self.timeout, 12))  # 5s connect, 12s read
 
         try:
-            resp = None
-            try:
-                # Primary attempt with certifi CA bundle
-                resp = requests.get(
-                    url,
-                    headers=headers,
-                    timeout=timeout_tuple,
-                    allow_redirects=True,
-                    verify=certifi.where()
-                )
-            except requests.exceptions.SSLError:
-                # Graceful fallback: try without SSL verification for staging/test sites
-                metadata["warnings"].append("SSL certificate verification failed; retried without verification.")
-                resp = requests.get(
-                    url,
-                    headers=headers,
-                    timeout=timeout_tuple,
-                    allow_redirects=True,
-                    verify=False
-                )
+            # P0 Security Enforcement:
+            # 1. Strict TLS verification with Mozilla CA bundle (no verify=False fallback)
+            # 2. Hop-by-hop redirect validation to prevent SSRF via open redirects
+            session = requests.Session()
+            session.max_redirects = 5
+
+            req = requests.Request('GET', url, headers=headers)
+            prepped = session.prepare_request(req)
+
+            resp = session.send(
+                prepped,
+                timeout=timeout_tuple,
+                verify=certifi.where(),
+                allow_redirects=True,
+                stream=True  # Stream to protect memory against zip-bombs / massive responses
+            )
+
+            # Revalidate every redirect destination
+            if resp.history:
+                metadata["redirect_count"] = len(resp.history)
+                for hop in resp.history:
+                    hop_safe, hop_err = self.is_safe_url(hop.url)
+                    if not hop_safe:
+                        return None, f"Redirect to unsafe destination blocked: {hop_err}", metadata
+
+            # Validate final landed URL
+            final_safe, final_err = self.is_safe_url(resp.url)
+            if not final_safe:
+                return None, f"Final redirect to unsafe destination blocked: {final_err}", metadata
 
             metadata["status_code"] = resp.status_code
             metadata["final_url"] = str(resp.url)
             metadata["content_type"] = resp.headers.get("Content-Type", "")
-            if len(resp.history) > 0:
-                metadata["redirect_count"] = len(resp.history)
 
             # Check status codes
             if resp.status_code in (403, 429):
@@ -157,13 +164,21 @@ class URLFetcher:
             if resp.status_code >= 400:
                 return None, f"HTTP Error {resp.status_code}: {resp.reason}", metadata
 
-            # Enforce max payload size
-            content_bytes = resp.content
-            if len(content_bytes) > self.MAX_PAYLOAD_BYTES:
-                return None, f"Payload size exceeds maximum allowed limit of {self.MAX_PAYLOAD_BYTES // (1024*1024)}MB.", metadata
+            # Read content with strict chunked size limit (MAX_PAYLOAD_BYTES)
+            chunks = []
+            total_bytes = 0
+            for chunk in resp.iter_content(chunk_size=65536, decode_unicode=False):
+                total_bytes += len(chunk)
+                if total_bytes > self.MAX_PAYLOAD_BYTES:
+                    return None, f"Payload size exceeds maximum allowed limit of {self.MAX_PAYLOAD_BYTES // (1024*1024)}MB.", metadata
+                chunks.append(chunk)
 
-            # Decode text
-            html_content = resp.text
+            raw_bytes = b"".join(chunks)
+            encoding = resp.encoding or "utf-8"
+            try:
+                html_content = raw_bytes.decode(encoding, errors="replace")
+            except Exception:
+                html_content = raw_bytes.decode("utf-8", errors="replace")
             metadata["load_time_ms"] = int((time.time() - start_time) * 1000)
             metadata["content_hash"] = hashlib.sha256(html_content.encode("utf-8")).hexdigest()[:16]
 

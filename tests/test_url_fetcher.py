@@ -1,5 +1,6 @@
 import unittest
 from unittest.mock import patch, MagicMock
+import requests
 from core.fetcher import URLFetcher
 from core.audit_engine import AuditEngine
 from core.schemas import AuditState
@@ -29,8 +30,8 @@ class TestURLFetcher(unittest.TestCase):
         self.assertFalse(is_safe)
         self.assertIn("blocked", err.lower())
 
-    @patch("requests.get")
-    def test_fetch_html_success(self, mock_get):
+    @patch.object(requests.Session, "send")
+    def test_fetch_html_success(self, mock_send):
         """Mock successful response from external landing page."""
         sample_html = (
             "<!DOCTYPE html><html><head><title>Test</title></head>"
@@ -40,11 +41,11 @@ class TestURLFetcher(unittest.TestCase):
         mock_resp.status_code = 200
         mock_resp.url = "https://kestrelfunding.com/loans"
         mock_resp.headers = {"Content-Type": "text/html; charset=utf-8"}
-        mock_resp.content = sample_html.encode("utf-8")
-        mock_resp.text = sample_html
+        mock_resp.encoding = "utf-8"
         mock_resp.history = []
+        mock_resp.iter_content.return_value = [sample_html.encode("utf-8")]
 
-        mock_get.return_value = mock_resp
+        mock_send.return_value = mock_resp
 
         # Bypass DNS resolution check for mocked domain
         with patch.object(self.fetcher, "is_safe_url", return_value=(True, None)):
@@ -57,8 +58,28 @@ class TestURLFetcher(unittest.TestCase):
             self.assertEqual(meta["final_url"], "https://kestrelfunding.com/loans")
             self.assertIsNotNone(meta["content_hash"])
 
-    @patch("requests.get")
-    def test_audit_url_integration(self, mock_get):
+    @patch.object(requests.Session, "send")
+    def test_redirect_to_private_ip_is_blocked(self, mock_send):
+        """SSRF: Redirecting to private loopback/internal IP must be aborted."""
+        mock_hop = MagicMock()
+        mock_hop.url = "http://127.0.0.1:8000/internal"
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.url = "http://127.0.0.1:8000/internal"
+        mock_resp.history = [mock_hop]
+        mock_resp.headers = {}
+        mock_resp.encoding = "utf-8"
+        mock_resp.iter_content.return_value = [b"secret data"]
+
+        mock_send.return_value = mock_resp
+
+        html, err, meta = self.fetcher.fetch_html("https://public-site.com/redirect-to-localhost")
+        self.assertIsNone(html)
+        self.assertIn("blocked", err.lower())
+
+    @patch.object(requests.Session, "send")
+    def test_audit_url_integration(self, mock_send):
         """AuditEngine.audit_url executes full 7-phase audit from live URL."""
         sample_html = (
             "<!DOCTYPE html><html><body>"
@@ -70,10 +91,10 @@ class TestURLFetcher(unittest.TestCase):
         mock_resp.status_code = 200
         mock_resp.url = "https://example.com"
         mock_resp.headers = {"Content-Type": "text/html"}
-        mock_resp.content = sample_html.encode("utf-8")
-        mock_resp.text = sample_html
+        mock_resp.encoding = "utf-8"
         mock_resp.history = []
-        mock_get.return_value = mock_resp
+        mock_resp.iter_content.return_value = [sample_html.encode("utf-8")]
+        mock_send.return_value = mock_resp
 
         with patch.object(self.engine.fetcher, "is_safe_url", return_value=(True, None)):
             result = self.engine.audit_url(
