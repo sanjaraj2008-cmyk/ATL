@@ -346,6 +346,27 @@
         </div>
       </div>
 
+      <!-- Incomplete Retrieval / Unreadable Landing Page Diagnostic Banner (P1 Trust) -->
+      <div id="unreadable-banner" class="hidden border border-amber-400 bg-amber-50 dark:bg-amber-950/40 p-6 rounded-2xl text-amber-900 dark:text-amber-200 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-sm">
+        <div class="flex items-start space-x-4">
+          <i data-lucide="help-circle" class="w-6 h-6 text-amber-600 shrink-0 mt-0.5"></i>
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="status-pill status-partial">UNABLE TO ASSESS FULLY</span>
+              <h4 id="unreadable-title" class="font-bold text-amber-800 dark:text-amber-300 font-mono text-sm uppercase tracking-wider">Incomplete Retrieval / Single-Page App Detected</h4>
+            </div>
+            <p id="unreadable-desc" class="text-xs mt-1.5 leading-relaxed text-amber-800/90 dark:text-amber-200/90 font-sans">
+              The target website could not be fully assessed via static HTTP fetch. No text content was extracted or the destination site blocked cloud requests.
+            </p>
+            <div id="unreadable-meta" class="mt-2 text-[11px] font-mono text-amber-700 dark:text-amber-400 space-x-3"></div>
+          </div>
+        </div>
+        <button type="button" onclick="switchLandingInputTab('html'); document.getElementById('input-html').focus();" class="btn-metic-secondary !text-xs !py-2 shrink-0 self-start md:self-center flex items-center space-x-1.5">
+          <i data-lucide="clipboard-copy" class="w-3.5 h-3.5"></i>
+          <span>Paste HTML Directly</span>
+        </button>
+      </div>
+
       <!-- Results Executive Summary & Findings -->
       <div id="results-container" class="hidden space-y-8">
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6">

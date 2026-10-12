@@ -908,23 +908,51 @@ function renderAuditResults(data) {
     liabilityBanner.classList.add('hidden');
   }
 
-  document.getElementById('res-score').textContent = `${data.match_score}/100`;
-  const gradeElem = document.getElementById('res-grade');
-  gradeElem.textContent = data.grade;
+  const unreadableBanner = document.getElementById('unreadable-banner');
+  const isUnreadable = data.audit_state === "FAILED_UNREADABLE_INPUT" || data.match_score === null;
 
-  if (data.match_score >= 85) {
-    gradeElem.className = "status-pill status-supported w-max";
-  } else if (data.match_score >= 60) {
+  if (isUnreadable) {
+    unreadableBanner.classList.remove('hidden');
+    const reasonText = data.scoring_unavailability_reason || "Unable to extract meaningful text content from destination page snapshot.";
+    document.getElementById('unreadable-desc').textContent = reasonText;
+    
+    const meta = data.audit_metadata || {};
+    const metaItems = [];
+    if (meta.source_url) metaItems.push(`Target: ${escapeHTML(meta.source_url)}`);
+    if (meta.http_status) metaItems.push(`HTTP ${meta.http_status}`);
+    if (meta.load_time_ms) metaItems.push(`${meta.load_time_ms}ms`);
+    if (data.audit_warnings && data.audit_warnings.length > 0) {
+      metaItems.push(`Diagnostic: ${escapeHTML(data.audit_warnings[0])}`);
+    }
+    document.getElementById('unreadable-meta').innerHTML = metaItems.join(' · ');
+
+    document.getElementById('res-score').textContent = "N/A";
+    const gradeElem = document.getElementById('res-grade');
+    gradeElem.textContent = data.grade || "Unable to Assess";
     gradeElem.className = "status-pill status-partial w-max";
+    document.getElementById('res-coverage').textContent = "0%";
+    document.getElementById('res-prominence').textContent = "N/A";
+    document.getElementById('res-validity').textContent = "N/A";
   } else {
-    gradeElem.className = "status-pill status-contradicted w-max";
+    unreadableBanner.classList.add('hidden');
+    document.getElementById('res-score').textContent = `${data.match_score}/100`;
+    const gradeElem = document.getElementById('res-grade');
+    gradeElem.textContent = data.grade;
+
+    if (data.match_score >= 85) {
+      gradeElem.className = "status-pill status-supported w-max";
+    } else if (data.match_score >= 60) {
+      gradeElem.className = "status-pill status-partial w-max";
+    } else {
+      gradeElem.className = "status-pill status-contradicted w-max";
+    }
+
+    document.getElementById('res-coverage').textContent = `${data.evidence_coverage_index}%`;
+    document.getElementById('res-prominence').textContent = data.evidence_prominence_index !== null ? `${data.evidence_prominence_index}%` : "N/A";
+    document.getElementById('res-validity').textContent = data.evidence_validity_rate !== null ? `${data.evidence_validity_rate}%` : "N/A";
   }
 
-  document.getElementById('res-coverage').textContent = `${data.evidence_coverage_index}%`;
-  document.getElementById('res-prominence').textContent = data.evidence_prominence_index !== null ? `${data.evidence_prominence_index}%` : "N/A";
-  document.getElementById('res-validity').textContent = data.evidence_validity_rate !== null ? `${data.evidence_validity_rate}%` : "N/A";
-
-  document.getElementById('findings-count').textContent = data.findings.length;
+  document.getElementById('findings-count').textContent = data.findings ? data.findings.length : 0;
 
   const list = document.getElementById('findings-list');
   list.innerHTML = '';
